@@ -1,0 +1,154 @@
+---
+title: "steamAPI"
+output: html_document
+date: "2022-12-23"
+---
+
+## R notebook to download games (apps) from Steam using their APIs
+
+```{r}
+library(tidyverse)
+library(httr)
+library(rvest)
+library(lubridate)
+```
+
+In order to do the analysis, I'll first pull all the app IDs currently available on steam. As of. 12/23/2022 it is 152217. There are 54 apps that have a placeholder id (but they're not available to see for the public yet, so no name). I decided to eliminate those, leaving me with 152163 apps. There were also some mistakes present, so the final number of apps is 152194.
+
+> the code below doesn't need to be re-run. Only ran once to create a tibble with IDs and names
+
+    complete_app_list <- GET('http://api.steampowered.com/ISteamApps/GetAppList/v0002/',
+      query = list(format='json'))
+
+    steam_apps_df <- tibble(ID = numeric(),
+                      name_tot = character(),
+                      type = character(),
+                      name_app = character(),
+                      required_age = numeric(),
+                      publishers = character(),
+                      developers = character(),
+                      is_free = logical(),
+                      dlc = character(),
+                      windows_mac_linux = character(),
+                      metacritic = numeric(),
+                      categories = character(),
+                      genres = character(),
+                      n_screenshots = numeric(),
+                      n_trailers = numeric(),
+                      recommended = numeric(),
+                      achievements = numeric(),
+                      release_date = date()
+    )
+
+    counting <- 0
+
+    for (i in content(complete_app_list)$applist$apps) {
+      if (i$name != '') {
+        steam_apps_df <- steam_apps_df %>% 
+          add_row(ID = i$appid, name_tot = i$name)
+      }
+      counting = counting + 1
+      if (counting %% 15000 == 0){
+        print(counting)
+      }
+    }
+
+
+    saveRDS(steam_apps_df, file = "../data/complete_apps_list.rds")
+
+```{r}
+steam_apps_df <- readRDS('../data/complete_apps_list.rds')
+```
+
+```{r}
+get_app_details <- function(apps_df, num_apps){
+  list_ID <- steam_apps_df %>% filter(is.na(name_app)) %>% pull(ID)
+  
+  # loop over the list_ID of apps (excluding ones we have already)
+  # this is the equivalent of enumerate in python
+  for (i in seq_along(list_ID)) {
+    
+    # break when over the number of apps we want the details for
+    if (i > num_apps) {
+      break
+    }
+    
+    # just to see how well is progressing
+    if (i %% 100 == 0) {
+      print(paste('Currently on loop:', i))
+    }
+    
+    # wait for 2 sec (steam API has limited # of requests)
+    Sys.sleep(2)
+    app_details <- GET('https://store.steampowered.com/api/appdetails/',
+                       query = list(appids = list_ID[[i]], format='json'))
+    
+    #need ID as character in order to access data
+    list_char_ID <- as.character(list_ID[[i]])
+  
+    # break the loop if return code is not acceptable
+    if (status_code(app_details) != 200) {
+      print(paste('uh oh ..', status_code(app_details), 'for id', list_ID[[i]]))
+      break
+    } else if (content(app_details)[[list_char_ID]]$success == FALSE) {
+      # if the app returns status false it means it's not there!
+      apps_df <- apps_df %>%
+        filter(ID != list_ID[[i]])
+    } else {
+
+      # this is where I get the content data
+      tmp_data <- content(app_details)[[list_char_ID]]$data
+      
+      # the following variables are obtained through loops since they're in a list
+      # that can vary in size
+      tmp_developers <- ''
+      tmp_publishers <- ''
+      tmp_dlc <- ''
+      tmp_categories <- ''
+      tmp_genres <- ''
+      
+      for (developer in tmp_data$developers) {
+        tmp_developers <- paste(tmp_developers, developer, sep=';')}
+      for (publisher in tmp_data$publishers) {
+        tmp_publishers <- paste(tmp_publishers, publisher, sep=';')}
+      for (dlc in tmp_data$dlc) {
+        tmp_dlc <- paste(tmp_dlc, dlc, sep=';')}
+      for (category in tmp_data$categories) {
+        tmp_categories <- paste(tmp_categories, category$description, sep=';')}
+      for (gen in tmp_data$genres) {
+        tmp_genres <- paste(tmp_genres, gen$description, sep=';')}
+      
+      apps_df <- apps_df %>% 
+        rows_update(tibble(
+                ID = list_ID[[i]],
+                type = tmp_data$type,
+                name_app = tmp_data$name,
+                required_age = as.numeric(tmp_data$required_age),
+                publishers = na_if(str_remove(tmp_publishers, ';'), ''),
+                developers = na_if(str_remove(tmp_developers, ';'), ''),
+                is_free = tmp_data$is_free,
+                dlc = na_if(str_remove(tmp_dlc, ';'), ''),
+                windows_mac_linux = paste(tmp_data$platforms$windows, tmp_data$platforms$mac, tmp_data$platforms$linux, sep=';'),
+                metacritic = tmp_data$metacritic$score,
+                categories = na_if(str_remove(tmp_categories, ';'), ''),
+                genres = na_if(str_remove(tmp_genres, ';'), ''),
+                n_screenshots = length(tmp_data$screenshots),
+                n_trailers = length(tmp_data$movies),
+                recommended = tmp_data$recommendations$total,
+                achievements = tmp_data$achievements$total,
+                release_date = tmp_data$release_date$date),
+              by = 'ID')
+      
+    }  
+  }
+  return(apps_df)
+}
+
+```
+
+```{r}
+steam_apps_df <- get_app_details(steam_apps_df, 5)
+```
+
+
+
