@@ -1,0 +1,77 @@
+---
+title: "games_analysis"
+output: html_document
+date: "2022-12-26"
+---
+
+# Steam Games Data Exploration and Analysis
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+
+## Exploring the data
+
+I started with a tibble having 152194 apps, and after running through them individually, 138746 remain (non null, etc...). In other words, I lost about 8.8% of data - collected from 12/23/2022 to 12/26/2022. Some of it could be recovered I'm sure, as the steam APIs don't always perfectly reflect the current situation, for example by scraping through the steam store. I'll leave that for now.
+
+```{r}
+steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds')
+```
+
+```{r}
+steam_apps_df %>% 
+  group_by(type) %>% 
+  summarize(n())
+```
+
+First interesting observation: 18717 apps total (8810 are games) that have different names in the complete list vs when taken individually. There are some that have just different capitalization or a : replaced with a -, but then there are ones that have titles changed (added trademarks, titles, etc..). Not going to explore this further.
+
+```{r}
+steam_apps_df %>% 
+  filter(name_tot != name_app) %>% 
+  select(name_tot, name_app)
+```
+
+Alright, focusing on games only, let's see how many nans we're working with!
+
+```{r}
+steam_games_df <- steam_apps_df%>% 
+  filter(type=='game')
+```
+
+> DLC figures not every game have that, especially if not successful. I like to see that there's only about 2k games with no publisher or no developer (2048 of which are missing both). What sucks though is so many missing metacritic and/or recommended values! In particular, using `steam_games_df %>%  filter(!is.na(metacritic) & !is.na(recommended))` only 3291 games have both. Lastly, 516 games have no release date.
+
+```{r}
+steam_games_df %>% 
+  summarize(across(everything(), ~sum(is.na(.)))) %>% 
+  select(publishers, developers, dlc, metacritic, categories, genres, recommended, achievements)
+```
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(publishers)) %>%
+  separate(publishers, c('pub1','pub2', 'pub3', 'pub4', 'pub5'), sep = ';') %>% 
+  select(name_app, pub1, pub2, pub3, pub4, pub5) %>% 
+  summarize(across(everything(), ~sum(!is.na(.))))
+```
+
+honly crap some companies list individual devs... one gets up to 40! I'll get back to this tomorrow..
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(developers)) %>%
+  separate(developers, c('dev1','dev2', 'dev3', 'dev4', 'dev5', 'dev6', 'dev7', 'dev8', 'dev9', 'dev10', 'dev11', 'dev12', 'dev13', 'dev14', 'dev15', 'dev16', 'dev17', 'dev18', 'dev19', 'dev20', 'dev21', 'dev22', 'dev23', 'dev24', 'dev25'), sep = ';') %>% 
+  select(name_app, dev1, dev2, dev3, dev4, dev5, dev6) %>% 
+  summarize(across(everything(), ~sum(!is.na(.))))
+#!is.na(dev5)
+```
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(developers)) %>%
+  # filter(name_app == 'VESTIGE' | name_app == 'Duncan and the Wisp')
+  slice(24644) %>% view()
+```
+
+
