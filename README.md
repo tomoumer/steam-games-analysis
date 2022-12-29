@@ -25,6 +25,7 @@ The app will allow to filter per publisher/developer, year of release, genre.
 
 ## Data Sources
 Using the [Steam APIs](https://steamcommunity.com/dev)
+Wikipedia for the list of game [publishers](https://en.wikipedia.org/wiki/List_of_video_game_publishers) and [developers](https://en.wikipedia.org/wiki/List_of_video_game_developers)
 
 ## Known Issues and Challenges
 Before I embarked on the current road, I was struggling with getting any information in regards to historical data for games. The documentation for the Steam APIs is questionable, just like Valve’s support for Dota+ (which costs $5/month). The APIs also don't consistently work well - there are games that clearly have data available on the [steam store](https://store.steampowered.com/), and yet the API doesn't return it. I’m also expecting that because some games have strange behaviors due to random updates and whatnot, I will need to be careful in the analysis and how to present the data.
