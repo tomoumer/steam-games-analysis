@@ -9,6 +9,7 @@ date: "2022-12-23"
 ```{r}
 library(tidyverse)
 library(httr)
+library(rvest)
 library(lubridate)
 ```
 
@@ -198,3 +199,28 @@ Finally, and perhaps most importantly, save the data so that it can be
 ```{r}
 saveRDS(steam_apps_df, file = "../data/complete_apps_list_138746.rds")
 ```
+
+## Ge publishers and developers from wikipedia
+
+I decided to add this part to the steamAPI document, since it contains more webscraping. Obtaining the list of publishers and developers from Wikipedia.
+
+```{r}
+publisher_list <-  read_html('https://en.wikipedia.org/wiki/List_of_video_game_publishers')
+
+publisher_list %>% 
+  html_nodes('table') %>% 
+  pluck(2) %>% 
+  html_table %>% 
+  saveRDS(file='../data/publisher_list.rds')
+
+
+developer_list <-  read_html('https://en.wikipedia.org/wiki/List_of_video_game_developers')
+
+developer_list %>% 
+  html_nodes('table') %>% 
+  pluck(4) %>% 
+  html_table %>% 
+  saveRDS(file='../data/developer_list.rds')
+
+```
+
