@@ -25,6 +25,7 @@ The app will allow to filter per publisher/developer, year of release, genre.
 
 ## Data Sources
 Using the [Steam APIs](https://steamcommunity.com/dev)
+
 Wikipedia for the list of game [publishers](https://en.wikipedia.org/wiki/List_of_video_game_publishers) and [developers](https://en.wikipedia.org/wiki/List_of_video_game_developers)
 
 ## Known Issues and Challenges
