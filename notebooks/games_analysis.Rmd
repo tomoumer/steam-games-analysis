@@ -56,22 +56,74 @@ steam_games_df %>%
   summarize(across(everything(), ~sum(!is.na(.))))
 ```
 
-honly crap some companies list individual devs... one gets up to 40! I'll get back to this tomorrow..
+honly crap some games have the entire list individual devs... one gets up to 40! I decided that 20 developers listed is plenty enough - only 3 games have that many
 
 ```{r}
 steam_games_df %>% 
   filter(!is.na(developers)) %>%
-  separate(developers, c('dev1','dev2', 'dev3', 'dev4', 'dev5', 'dev6', 'dev7', 'dev8', 'dev9', 'dev10', 'dev11', 'dev12', 'dev13', 'dev14', 'dev15', 'dev16', 'dev17', 'dev18', 'dev19', 'dev20', 'dev21', 'dev22', 'dev23', 'dev24', 'dev25'), sep = ';') %>% 
-  select(name_app, dev1, dev2, dev3, dev4, dev5, dev6) %>% 
+  separate(developers, c('dev1','dev2', 'dev3', 'dev4', 'dev5', 'dev6', 'dev7', 'dev8', 'dev9', 'dev10', 'dev11', 'dev12', 'dev13', 'dev14', 'dev15', 'dev16', 'dev17', 'dev18', 'dev19', 'dev20'), sep = ';') %>% 
+  select(name_app, dev1, dev2, dev3, dev4, dev5, dev6, dev7, dev8, dev9, dev10, dev11, dev12, dev13, dev14, dev15, dev16, dev17, dev18, dev19, dev20) %>% 
   summarize(across(everything(), ~sum(!is.na(.))))
 #!is.na(dev5)
+```
+All in all, the overwhelming majority of games has only 2 publishers (only 3.3% have 2 in fact), as well as only 2 developers (6.7%). Now trying to see how many different developers appear.
+
+Now to see how many distinct dev1 or pub1 there are. in both cases, over 40000 different publishers/developers!
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(publishers)) %>%
+  separate(publishers, c('pub1', 'pub2'), sep=';') %>%
+  select(pub1) %>% 
+  n_distinct()
+#  count(pub1, sort=TRUE)
+  
+
+steam_games_df %>% 
+  filter(!is.na(developers)) %>%
+  separate(developers, c('dev1', 'dev2'), sep=';') %>% 
+#  count(dev1, sort=TRUE)
+  select(dev1) %>% 
+  n_distinct()
+
+```
+
+
+
+
+
+```{r}
+#steam_games_df %>% 
+#  filter(!is.na(developers)) %>%
+#  slice(24644) %>%
+#  view()
+```
+
+Similarly to above, looking ad categories and genres now. There are at most 22 categories! that's because "remote play on phone", "remote play on TV", local co-op, etc... are all separate.
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(categories)) %>%
+  separate(categories, c('cat1','cat2', 'cat3', 'cat4', 'cat5', 'cat6', 'cat7', 'cat8', 'cat9', 'cat10', 'cat11', 'cat12', 'cat13', 'cat14', 'cat15', 'cat16', 'cat17', 'cat18', 'cat19', 'cat20', 'cat21', 'cat22'), sep = ';') %>% 
+  select(name_app, cat1, cat2, cat3, cat4, cat5, cat6, cat7, cat8, cat9, cat10, cat12, cat13, cat14, cat15, cat16, cat17, cat18, cat19, cat20, cat21, cat22) %>% 
+  summarize(across(everything(), ~sum(!is.na(.))))
+```
+
+Ok, I feel like this is just fishing for filters. There's a game, "CAT SUDOKU🐱" that allegedly has 19 genres. Second most is at 14, with '英语杀', which google translates to 'English kill' lol. At 12 genres there's '墲人之境：1V4摸金对决' translated to 'The realm of the barren: 1V4 duel for gold' and 'Simple Tools'. Having 8-11 genres still has a suspiciously low number of games (in the hundreds). And really, only 10% of games have 5 genres or more.
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(genres)) %>%
+  separate(genres, c('gen1','gen2', 'gen3', 'gen4', 'gen5', 'gen6', 'gen7', 'gen8', 'gen9', 'gen10', 'gen11', 'gen12', 'gen13', 'gen14', 'gen15', 'gen16', 'gen17', 'gen18', 'gen19'), sep = ';') %>% 
+  select(name_app, gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, gen13, gen14, gen15, gen16, gen17, gen18, gen19) %>% 
+  summarize(across(everything(), ~sum(!is.na(.))))
+
+
 ```
 
 ```{r}
 steam_games_df %>% 
-  filter(!is.na(developers)) %>%
-  # filter(name_app == 'VESTIGE' | name_app == 'Duncan and the Wisp')
-  slice(24644) %>% view()
+  filter(name_app == 'HOT GIRLS VR') %>%  view()
 ```
 
 
