@@ -17,6 +17,8 @@ I started with a tibble having 152194 apps, and after running through them indiv
 
 ```{r}
 steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds')
+publishers_df <- readRDS('../data/publisher_list.rds')
+developers_df <- readRDS('../data/developer_list.rds')
 ```
 
 ```{r}
@@ -25,7 +27,7 @@ steam_apps_df %>%
   summarize(n())
 ```
 
-First interesting observation: 18717 apps total (8810 are games) that have different names in the complete list vs when taken individually. There are some that have just different capitalization or a : replaced with a -, but then there are ones that have titles changed (added trademarks, titles, etc..). Not going to explore this further.
+First interesting observation: 18717 apps total (8810 of which are games) that have different names in the complete list vs when taken individually. There are some that have just different capitalization or a : replaced with a -, but then there are ones that have titles changed (added trademarks, titles, etc..). Not going to explore this further.
 
 ```{r}
 steam_apps_df %>% 
@@ -74,9 +76,9 @@ Now to see how many distinct dev1 or pub1 there are. in both cases, over 40000 d
 steam_games_df %>% 
   filter(!is.na(publishers)) %>%
   separate(publishers, c('pub1', 'pub2'), sep=';') %>%
-  select(pub1) %>% 
-  n_distinct()
-#  count(pub1, sort=TRUE)
+#  select(pub1) %>% 
+#  n_distinct()
+  count(pub1, sort=TRUE)
   
 
 steam_games_df %>% 
@@ -87,9 +89,33 @@ steam_games_df %>%
   n_distinct()
 
 ```
+Now comparing the lists to see how many games remain... For publishers, 3505, for developers 2148
+
+```{r}
+# note: converting names tolower since there is some missmatch (like SEGA and Sega) # just doing a count() gives the total values
+steam_games_df %>% 
+  filter(!is.na(publishers)) %>%
+  separate(publishers, c('pub1', 'pub2', 'pub3', 'pub4', 'pub5'), sep=';') %>%
+  filter(tolower(pub1) %in% tolower(publishers_df %>% pull(Publisher)) |
+           tolower(pub2) %in% tolower(publishers_df %>% pull(Publisher)) |
+           tolower(pub3) %in% tolower(publishers_df %>% pull(Publisher)) |
+           tolower(pub4) %in% tolower(publishers_df %>% pull(Publisher)) |
+           tolower(pub5) %in% tolower(publishers_df %>% pull(Publisher))) %>% 
+  count(pub1, sort=TRUE)
 
 
+steam_games_df %>% 
+  filter(!is.na(developers)) %>%
+  separate(developers, c('dev1', 'dev2', 'dev3', 'dev4', 'dev5'), sep=';') %>%
+  filter(tolower(dev1) %in% tolower(developers_df %>% pull(Developer)) |
+           tolower(dev2) %in% tolower(developers_df %>% pull(Developer)) |
+           tolower(dev3) %in% tolower(developers_df %>% pull(Developer)) |
+           tolower(dev4) %in% tolower(developers_df %>% pull(Developer)) |
+           tolower(dev5) %in% tolower(developers_df %>% pull(Developer))) %>% 
+  count(dev1, sort=TRUE)
 
+```
+My idea about looking at countries of origin might not be feasible here, because wiki has an outdated list. Unless I manually find the missing devs and studios and add their information in. Of course I'd only be able to do that for maybe the first 100 or 200 studios, not all 40,000.
 
 
 ```{r}
@@ -118,12 +144,106 @@ steam_games_df %>%
   select(name_app, gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, gen13, gen14, gen15, gen16, gen17, gen18, gen19) %>% 
   summarize(across(everything(), ~sum(!is.na(.))))
 
-
 ```
 
 ```{r}
+# I just needed to know which all genres this game had ... it's quite ridiculous
 steam_games_df %>% 
   filter(name_app == 'HOT GIRLS VR') %>%  view()
+```
+
+Next up, looking at some general distributions of variables. There is a game called '顶酱', i.e. 'topping sauce' that has required age 120 years. For the games that have a specified age (i.e. not 0, which amounts to 1580 games) The peak is at 17 (and second highest 18). There is a third peak at 13.
+
+```{r}
+steam_games_df %>% 
+  filter(required_age != 0 & required_age < 25) %>% 
+  ggplot(aes(x=required_age)) +
+  geom_histogram(binwidth=1, na.rm=TRUE)
+```
+For the free games, pretty straightforward, just counting them ```steam_games_df %>% count(is_free)``` reveals 9699 are free (most, 71616 are not).
+
+For the DLCs for right now I'm only interested in how many games have them, and, to see how many there are. So, 10947 games have DLCs, 6956 have only one, 1731 have two, 673 have three and so on. Fantasy Grounds Unity has the most, 2565 DLCs, while Fantasy Grounds Classic has 1973. It also appears that Train Simulator Classic appears 5 times (with different IDs).
+
+So after that discovery, I checked for distinct names and found out that there are 80652 differently named games. For one reason or another, there's 663 duplicates (but with different app_ids).
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(dlc)) %>% 
+  mutate(num_dlc = str_count(dlc, ';') + 1) %>% 
+  select(name_app, num_dlc) %>% 
+  #count(num_dlc)
+  arrange(desc(num_dlc))
+```
+Next up, looking at availability on platforms; With 81315 total games, 81282 (99.95%) are on windows, 16419 (20.19%) are on MacOS and 11284 (13.88%) are on Linux.
+
+```{r}
+steam_games_df %>% 
+  filter(!is.na(windows_mac_linux)) %>%
+  separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
+  select(name_app, win, mac, linux) %>% 
+  summarize(n(), sum(as.logical(win)), sum(as.logical(mac)), sum(as.logical(linux)))
+```
+And then the two distributions of metacritic (4,762 games) and recommended scores (14,964 games, out of which only 913 have more than 10,000 recommends), separately and together (3,395).
+
+> Notable that GTA V, CS:Global Offensive and PUBG: Battlegrounds have over 1,000,000 recommends! Also, in both cases recommends are following waht appears to be a Poisson distribution
+
+> also the correlation between metacritic score and user recommendations seems to be pretty weak, with 0.13 !
+
+```{r}
+steam_games_df %>% 
+  ggplot(aes(x=metacritic)) +
+  geom_histogram(binwidth=1, na.rm=TRUE)
+
+steam_games_df %>% 
+  filter(recommended < 10000) %>% 
+  ggplot(aes(x=recommended)) +
+  geom_histogram(binwidth=1000, na.rm=TRUE)
+
+steam_games_df %>% 
+  filter(recommended >= 10000 & recommended < 1000000) %>% 
+  ggplot(aes(x=recommended)) +
+  geom_histogram(binwidth=1000, na.rm=TRUE)
+
+steam_games_df %>% 
+  filter(!is.na(metacritic) & !is.na(recommended)) %>% 
+  select(metacritic, recommended) %>% 
+  cor()
+
+```
+And then, similarly to before, checking out the distributions of number of screenshots (whole dataset), trailers (whole dataset) and achievements (35,492 games):
+
+> most games have 5 - 10 screenshots, and the vast majority has 1 trailer
+
+> for achievements it's interesting that besides the initial peak, there's also a clear spike at 100 achievements
+
+```{r}
+steam_games_df %>% 
+  # 98 games have more than 50 screenshots
+  filter(n_screenshots <= 50) %>% 
+  ggplot(aes(x=n_screenshots)) +
+  geom_histogram(binwidth=1, na.rm=TRUE)
+
+steam_games_df %>% 
+  ggplot(aes(x=n_trailers)) +
+  geom_histogram(binwidth=1, na.rm=TRUE)
+
+steam_games_df %>% 
+  # 458 games have more than 100 achievements ...
+  filter(achievements <= 150 ) %>% 
+  ggplot(aes(x=achievements)) +
+  geom_histogram(binwidth=2, na.rm=TRUE)
+```
+And finally, looking at the years of release. Like said earlier, 516 don't have a release date, 5,596 are 'coming soon'. There's also 2,820 games that have 'SOON', 'to be announced', 'TBA', and some other stuff - extracted only the relevant ones by finding the ones that have a year - all in all, lost 8,932 games. There are several 'funny' people with games still to be released, in 1969...
+
+```{r}
+steam_games_df %>% 
+  #filter(tolower(release_date) != 'coming soon' & release_date != '') %>% 
+  select(name_app, release_date) %>% 
+  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+  filter(!is.na(release_year) & release_year < 2023 & release_year > 1996) %>% 
+  ggplot(aes(y=release_year)) +
+  geom_bar()
+  
 ```
 
 
