@@ -13,7 +13,7 @@ library(lubridate)
 
 ## Exploring the data
 
-I started with a tibble having 152194 apps, and after running through them individually, 138746 remain (non null, etc...). In other words, I lost about 8.8% of data - collected from 12/23/2022 to 12/26/2022. Some of it could be recovered I'm sure, as the steam APIs don't always perfectly reflect the current situation, for example by scraping through the steam store. I'll leave that for now.
+I started with a tibble having 152,194 apps, and after running through them individually, 138,746 remain (non null, etc...). In other words, I lost about 8.8% of data - collected from 12/23/2022 to 12/26/2022. Some of it could be recovered I'm sure, as the steam APIs don't always perfectly reflect the current situation, for example by scraping through the steam store. I'll leave that for now.
 
 ```{r}
 steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds')
@@ -21,13 +21,34 @@ publishers_df <- readRDS('../data/publisher_list.rds')
 developers_df <- readRDS('../data/developer_list.rds')
 ```
 
+Much later into the data exploration I realized that some games appear as multiple separate IDs - because of being re-released as a complete package. The individual name_app reflects that. For example:
+
+-   24085 Railworks Class 56 DLC
+-   24043 Railworks Class 20 Pack DLC
+-   24049 Railworks Class 45 Pack DLC
+-   24058 Railworks Evening Star DLC
+-   24010 Train Simulator
+
+are now all simply Train Simulator Classic (checkin it on the steam webpage, all IDs redirect to this same entry), so I added a `distinct(name_app, .keep_all= TRUE)` to account for that and had to redo all the steps and numbers down below.
+
+```{r}
+steam_apps_df <- steam_apps_df %>% 
+  distinct(name_app, .keep_all= TRUE)
+```
+
+This reduces the number of apps to 137,955 across all different categories - for games in particular, we go from 81,315 to 80,652.
+
 ```{r}
 steam_apps_df %>% 
   group_by(type) %>% 
-  summarize(n())
+  summarize(num = n()) %>% 
+  arrange(desc(num)) %>% 
+  mutate(num_perc = num *100 / steam_apps_df %>% count() %>% pull())
 ```
 
-First interesting observation: 18717 apps total (8810 of which are games) that have different names in the complete list vs when taken individually. There are some that have just different capitalization or a : replaced with a -, but then there are ones that have titles changed (added trademarks, titles, etc..). Not going to explore this further.
+Above is a breakdown of different types. games are not surprisingly, overwhelmingly at the top, 58.46%.
+
+With the next code, just checking the apps where there's a difference in naming.
 
 ```{r}
 steam_apps_df %>% 
@@ -35,64 +56,143 @@ steam_apps_df %>%
   select(name_tot, name_app)
 ```
 
-Alright, focusing on games only, let's see how many nans we're working with!
+Interesting observation: 18,512 apps total (8,682 of which are games) that have different names in the complete list compared when taken individually. There are some that have just different capitalization or a : replaced with a -, but then there are ones that have titles changed (added trademarks, titles, etc..). Not going to explore this further.
+
+## Exploring the games compounded variables
+
+> NOTE: I decided to choose only 'game' as a type and not DLC, or episode or the likes.
 
 ```{r}
 steam_games_df <- steam_apps_df%>% 
-  filter(type=='game')
+  filter(type=='game') %>% 
+  select(-type)
 ```
 
-> DLC figures not every game have that, especially if not successful. I like to see that there's only about 2k games with no publisher or no developer (2048 of which are missing both). What sucks though is so many missing metacritic and/or recommended values! In particular, using `steam_games_df %>%  filter(!is.na(metacritic) & !is.na(recommended))` only 3291 games have both. Lastly, 516 games have no release date.
+Next up, I wanted to see how many NAN values there are (in columns that could potentially contain them):
 
 ```{r}
 steam_games_df %>% 
-  summarize(across(everything(), ~sum(is.na(.)))) %>% 
-  select(publishers, developers, dlc, metacritic, categories, genres, recommended, achievements)
+  summarize(across(everything(), ~sum(!is.na(.)))) %>% 
+  select(publishers, developers, dlc, metacritic, categories, genres, recommended, achievements) %>% 
+  pivot_longer(cols = 1:8, names_to ='variables', values_to = 'number_remains') %>%
+  arrange(desc(number_remains)) %>% 
+  mutate(percentage_remains = number_remains * 100/ (steam_games_df %>% count() %>% pull()))
 ```
 
-```{r}
-steam_games_df %>% 
-  filter(!is.na(publishers)) %>%
-  separate(publishers, c('pub1','pub2', 'pub3', 'pub4', 'pub5'), sep = ';') %>% 
-  select(name_app, pub1, pub2, pub3, pub4, pub5) %>% 
-  summarize(across(everything(), ~sum(!is.na(.))))
-```
+Genres, developers, publishers and categories are all very well represented through the whole games data set. Only 43.70 % of games have achievements (makes sense, games didn't use to have this).
 
-honly crap some games have the entire list individual devs... one gets up to 40! I decided that 20 developers listed is plenty enough - only 3 games have that many
+Where it gets really scarce is the recommended, dlc and metacritic. For the DLC it likely makes sense - only successfull games would likely have them. I'm very suspicious about the metacritic scores (and possibly recommends). I think this is where the steam API falls short.
+
+### Functions for unpacking
+
+For unpacking the variables that I saved as a string separated by ';' I consistently used the same three descriptive tibbles, so it made sense to create functions to do it:
 
 ```{r}
-steam_games_df %>% 
-  filter(!is.na(developers)) %>%
-  separate(developers, c('dev1','dev2', 'dev3', 'dev4', 'dev5', 'dev6', 'dev7', 'dev8', 'dev9', 'dev10', 'dev11', 'dev12', 'dev13', 'dev14', 'dev15', 'dev16', 'dev17', 'dev18', 'dev19', 'dev20'), sep = ';') %>% 
-  select(name_app, dev1, dev2, dev3, dev4, dev5, dev6, dev7, dev8, dev9, dev10, dev11, dev12, dev13, dev14, dev15, dev16, dev17, dev18, dev19, dev20) %>% 
-  summarize(across(everything(), ~sum(!is.na(.))))
-#!is.na(dev5)
-```
-All in all, the overwhelming majority of games has only 2 publishers (only 3.3% have 2 in fact), as well as only 2 developers (6.7%). Now trying to see how many different developers appear.
-
-Now to see how many distinct dev1 or pub1 there are. in both cases, over 40000 different publishers/developers!
-
-```{r}
-steam_games_df %>% 
-  filter(!is.na(publishers)) %>%
-  separate(publishers, c('pub1', 'pub2'), sep=';') %>%
-#  select(pub1) %>% 
-#  n_distinct()
-  count(pub1, sort=TRUE)
+top_apps_by_var_count <- function(apps_df, var_name, num_apps) {
+  apps_summary <- apps_df %>% 
+    filter(!is.na(.data[[var_name]])) %>%
+    separate_rows(.data[[var_name]], sep = ';') %>% 
+    select(name_app, all_of(var_name)) %>%
+    group_by(name_app) %>%
+    summarize(num = n()) %>% 
+    arrange(desc(num)) %>% 
+    head(num_apps)
   
+  return(apps_summary)
+}
 
-steam_games_df %>% 
-  filter(!is.na(developers)) %>%
-  separate(developers, c('dev1', 'dev2'), sep=';') %>% 
-#  count(dev1, sort=TRUE)
-  select(dev1) %>% 
-  n_distinct()
+apps_count_by_var_count <- function(apps_df, var_name) {
+  apps_summary <- apps_df %>% 
+    filter(!is.na(.data[[var_name]])) %>%
+    separate_rows(.data[[var_name]], sep = ';') %>% 
+    select(name_app, all_of(var_name)) %>%
+    group_by(name_app) %>%
+    summarize(num_var = n()) %>% 
+    count(num_var, name='num_apps') %>% 
+    mutate(perc_apps = num_apps*100 / apps_df %>% count() %>% pull())
+  
+  return(apps_summary)
+}
+
+# Michael helped me fix this; was missing .data[[var_name]] in a few places
+# what broke it was count, which is using group_by
+apps_count_by_var <- function(apps_df, var_name) {
+  apps_summary <-  apps_df %>% 
+    filter(!is.na(.data[[var_name]])) %>%
+    separate_rows(.data[[var_name]], sep = ';') %>% 
+    select(name_app, all_of(var_name)) %>%
+    count(.data[[var_name]], sort=TRUE, name='num_apps') %>% 
+    mutate(perc_apps = num_apps*100 / apps_df %>% count() %>% pull())
+  
+  return(apps_summary)
+}
 
 ```
-Now comparing the lists to see how many games remain... For publishers, 3505, for developers 2148
+
+
+### Unpacking publishers
+
+Then to unpack the first four variables, in order as they appear in the data (publishers, developers, categories, genres).
+
+> NOTE: at first I used separate and specified the names of the columns,
+
+    steam_games_df %>% 
+      filter(!is.na(publishers)) %>%
+      separate(publishers, c('pub1','pub2', 'pub3', 'pub4', 'pub5'), sep = ';') %>% 
+      select(name_app, pub1, pub2, pub3, pub4, pub5) %>% 
+      summarize(across(everything(), ~sum(!is.na(.))))
+
+> I then found out that doing it with separate_rows is a way more elegant solution, especially since devs and some other variables had way more than 5 columns (see below)
+
+```
+steam_games_df %>% 
+  filter(!is.na(publishers)) %>%
+  separate_rows(publishers, sep = ';') %>% 
+  select(name_app, publishers) %>%
+  group_by(name_app) %>%
+  summarize(num_publishers = n()) %>% 
+  #arrange(desc(num_publishers))
+  count(num_publishers, name='num_games') %>% 
+  mutate(perc_games = num_games*100 / steam_games_df %>% count() %>% pull())
+
+steam_games_df %>% 
+  filter(!is.na(publishers)) %>%
+  separate_rows(publishers, sep = ';') %>% 
+  select(name_app, publishers) %>% 
+  count(publishers, sort=TRUE, name='num_games') %>% 
+  mutate(perc_games = num_games*100 / steam_games_df %>% count() %>% pull())
+```
+
+> And then that was replaced by the three functions:
 
 ```{r}
-# note: converting names tolower since there is some missmatch (like SEGA and Sega) # just doing a count() gives the total values
+top_apps_by_var_count(apps_df=steam_games_df, var_name='publishers', 10)
+apps_count_by_var_count(apps_df=steam_games_df, var_name='publishers')
+apps_count_by_var(apps_df=steam_games_df, var_name='publishers')
+```
+
+The overwhelming majority of games (93.87%) has only 1 publisher, and only two games have up to 5. 'Duncan and the Wisp' has individual people's names ('VESTIGE' does not).
+
+Biggest publisher is Big Fish Games with 445 games and there are 43,103 of game publishers.
+
+### Unpacking developers
+
+```{r}
+top_apps_by_var_count(apps_df=steam_games_df, var_name='developers', 10)
+apps_count_by_var_count(apps_df=steam_games_df, var_name='developers')
+apps_count_by_var(apps_df=steam_games_df, var_name='developers')
+```
+Similar situation to before, overwhelmingly most games (90.91%) have one developer. It gets crazier down the line with one game having 41 listed! After inspecting said game, 'Zoelie - SCAD Games Studio', and also 'Awake' and 'The Lodge' (20 devs) it becomes clear that games with that many developers have individuals listead (instead of companies).
+
+The biggest devs here are fairly comparable, 'Choice of Games' (150 games),	'Creobit'	(143) and 'Laush Dmitriy Sergeevich' (134). The first one makes choose your own adventure text based games. Creobit essentially makes mobile games and Laush games are ... something? From pixel-based action games, to mostly finding objects inside pictures. Weird, also hentai.
+
+Finally, there are 51,901 game developers listed.
+
+### Wikipedia Attempt
+
+Based on the numbers of devs and publishers present in steam, I didn't have much hope since Wikipedia only lists 724 devs and 877 publishers, some of them not even active anymore. Still:
+
+```
 steam_games_df %>% 
   filter(!is.na(publishers)) %>%
   separate(publishers, c('pub1', 'pub2', 'pub3', 'pub4', 'pub5'), sep=';') %>%
@@ -102,71 +202,79 @@ steam_games_df %>%
            tolower(pub4) %in% tolower(publishers_df %>% pull(Publisher)) |
            tolower(pub5) %in% tolower(publishers_df %>% pull(Publisher))) %>% 
   count(pub1, sort=TRUE)
+```
+Above the old way how I did with separate; below the new one:
 
+```{r}
+# note: converting names tolower since there is some missmatch (like SEGA and Sega) # just doing a count() gives the total values
+steam_games_df %>% 
+  filter(!is.na(publishers)) %>%
+  separate_rows(publishers, sep = ';') %>% 
+  filter(tolower(publishers) %in% tolower(publishers_df %>% pull(Publisher)) ) %>% 
+  select(name_app, publishers) %>% 
+  count(publishers, sort=TRUE, name='num_games')
 
 steam_games_df %>% 
   filter(!is.na(developers)) %>%
-  separate(developers, c('dev1', 'dev2', 'dev3', 'dev4', 'dev5'), sep=';') %>%
-  filter(tolower(dev1) %in% tolower(developers_df %>% pull(Developer)) |
-           tolower(dev2) %in% tolower(developers_df %>% pull(Developer)) |
-           tolower(dev3) %in% tolower(developers_df %>% pull(Developer)) |
-           tolower(dev4) %in% tolower(developers_df %>% pull(Developer)) |
-           tolower(dev5) %in% tolower(developers_df %>% pull(Developer))) %>% 
-  count(dev1, sort=TRUE)
-
+  separate_rows(developers, sep = ';') %>% 
+  filter(tolower(developers) %in% tolower(developers_df %>% pull(Developer)) ) %>% 
+  select(name_app, developers) %>% 
+  count(developers, sort=TRUE, name='num_games')
 ```
-My idea about looking at countries of origin might not be feasible here, because wiki has an outdated list. Unless I manually find the missing devs and studios and add their information in. Of course I'd only be able to do that for maybe the first 100 or 200 studios, not all 40,000.
+Just doing a simple tolower convert, I am left with 137 developers and 375 publishers, accounting for 3491 and 2212 games respectivelly. Not great. I'll have to figure out either how to do better matching, or otherwise will have to manually add some of the most productive devs and publishers to the lists.
 
+### Unpacking categories
+
+Similarly to above, looking ad categories. 
 
 ```{r}
-#steam_games_df %>% 
-#  filter(!is.na(developers)) %>%
-#  slice(24644) %>%
-#  view()
+top_apps_by_var_count(apps_df=steam_games_df, var_name='categories', 10)
+apps_count_by_var_count(apps_df=steam_games_df, var_name='categories')
+apps_count_by_var(apps_df=steam_games_df, var_name='categories')
 ```
+A whopping 91% of games are marked as Single-player. Makes sense as most games have at least some modes that can be played alone. Second most popular category, Steam Achievements, is at 44.4%. I'm genuinely surprised that Multi-player sits at only 19.95%. I guess everybody too busy playing Dota 2 or Counter-Strike: Global Offensive to care about other Multi-player games.
 
-Similarly to above, looking ad categories and genres now. There are at most 22 categories! that's because "remote play on phone", "remote play on TV", local co-op, etc... are all separate.
-
-```{r}
-steam_games_df %>% 
-  filter(!is.na(categories)) %>%
-  separate(categories, c('cat1','cat2', 'cat3', 'cat4', 'cat5', 'cat6', 'cat7', 'cat8', 'cat9', 'cat10', 'cat11', 'cat12', 'cat13', 'cat14', 'cat15', 'cat16', 'cat17', 'cat18', 'cat19', 'cat20', 'cat21', 'cat22'), sep = ';') %>% 
-  select(name_app, cat1, cat2, cat3, cat4, cat5, cat6, cat7, cat8, cat9, cat10, cat12, cat13, cat14, cat15, cat16, cat17, cat18, cat19, cat20, cat21, cat22) %>% 
-  summarize(across(everything(), ~sum(!is.na(.))))
-```
-
-Ok, I feel like this is just fishing for filters. There's a game, "CAT SUDOKU🐱" that allegedly has 19 genres. Second most is at 14, with '英语杀', which google translates to 'English kill' lol. At 12 genres there's '墲人之境：1V4摸金对决' translated to 'The realm of the barren: 1V4 duel for gold' and 'Simple Tools'. Having 8-11 genres still has a suspiciously low number of games (in the hundreds). And really, only 10% of games have 5 genres or more.
+There are two games at 22 categories ('Move or Die' and 'Streets of Rogue') and three with 21 categories ('Animated Puzzles', 'BattleBlock Theater®' and 'Splody')! that's because there are various iterations of PvP (regular, online, split screen), as well as various 'remote play' options.
 
 ```{r}
 steam_games_df %>% 
-  filter(!is.na(genres)) %>%
-  separate(genres, c('gen1','gen2', 'gen3', 'gen4', 'gen5', 'gen6', 'gen7', 'gen8', 'gen9', 'gen10', 'gen11', 'gen12', 'gen13', 'gen14', 'gen15', 'gen16', 'gen17', 'gen18', 'gen19'), sep = ';') %>% 
-  select(name_app, gen1, gen2, gen3, gen4, gen5, gen6, gen7, gen8, gen9, gen10, gen11, gen12, gen13, gen14, gen15, gen16, gen17, gen18, gen19) %>% 
-  summarize(across(everything(), ~sum(!is.na(.))))
-
+  filter(!is.na(categories)) %>% 
+  group_by(categories) %>% 
+  count() %>% 
+  arrange(desc(n))
 ```
 
+Single-player is still on top, and also the next 15 are just variations on it. First multi-player pairing is only at spot 17. Interestingly though, VR only is at position 7.
+
+### Unpacking genres
+
 ```{r}
-# I just needed to know which all genres this game had ... it's quite ridiculous
+top_apps_by_var_count(apps_df=steam_games_df, var_name='genres', 10)
+apps_count_by_var_count(apps_df=steam_games_df, var_name='genres')
+apps_count_by_var(apps_df=steam_games_df, var_name='genres')
+```
+Most games (69.2%) are marked as Indie, no surprise there. Besides that, the most popular categories are Action (42.1%), Adventure (39.3%) and Casual (38.3%).
+
+When it gets crazy, and obviously foul play - is games fishing for filters. There's a game, "CAT SUDOKU🐱" that allegedly has 19 genres. Second most is at 16, with '英语杀', which google translates to 'English kill' lol. At 12 genres there's '墲人之境：1V4摸金对决' translated to 'The realm of the barren: 1V4 duel for gold' and 'Simple Tools'. Having 8-11 genres still has a suspiciously low number of games (in the hundreds).
+
+For anyone curious about two hilariously ridiculous games, look for developer 'tomimar', with 'HOT GIRLS VR' and 'SEXY GIRLS'. Obviously racing, strategy, RPG, massively-multiplayer games. No doubt!
+
+In fact, most games seem to have 1-6 genres (96.15% of games), with the bulk really being concentrated from 1-4.
+
+```{r}
 steam_games_df %>% 
-  filter(name_app == 'HOT GIRLS VR') %>%  view()
+  filter(!is.na(genres)) %>% 
+  group_by(genres) %>% 
+  count() %>% 
+  arrange(desc(n))
 ```
 
-Next up, looking at some general distributions of variables. There is a game called '顶酱', i.e. 'topping sauce' that has required age 120 years. For the games that have a specified age (i.e. not 0, which amounts to 1580 games) The peak is at 17 (and second highest 18). There is a third peak at 13.
 
-```{r}
-steam_games_df %>% 
-  filter(required_age != 0 & required_age < 25) %>% 
-  ggplot(aes(x=required_age)) +
-  geom_histogram(binwidth=1, na.rm=TRUE)
+### Unpacking DLCs
+
+For right now I'm only interested in how many games have them, and, to see how many there are. When starting to look into this I realized that there were duplicate games that were re-released, but still had distinct IDs (I wrote about this in the very beginning of this notebook). This is how I first devised it:
+
 ```
-For the free games, pretty straightforward, just counting them ```steam_games_df %>% count(is_free)``` reveals 9699 are free (most, 71616 are not).
-
-For the DLCs for right now I'm only interested in how many games have them, and, to see how many there are. So, 10947 games have DLCs, 6956 have only one, 1731 have two, 673 have three and so on. Fantasy Grounds Unity has the most, 2565 DLCs, while Fantasy Grounds Classic has 1973. It also appears that Train Simulator Classic appears 5 times (with different IDs).
-
-So after that discovery, I checked for distinct names and found out that there are 80652 differently named games. For one reason or another, there's 663 duplicates (but with different app_ids).
-
-```{r}
 steam_games_df %>% 
   filter(!is.na(dlc)) %>% 
   mutate(num_dlc = str_count(dlc, ';') + 1) %>% 
@@ -174,20 +282,67 @@ steam_games_df %>%
   #count(num_dlc)
   arrange(desc(num_dlc))
 ```
-Next up, looking at availability on platforms; With 81315 total games, 81282 (99.95%) are on windows, 16419 (20.19%) are on MacOS and 11284 (13.88%) are on Linux.
+
+But then changed, to be consistent with the other variables:
+
+```{r}
+top_apps_by_var_count(apps_df=steam_games_df, var_name='dlc', 10)
+apps_count_by_var_count(apps_df=steam_games_df, var_name='dlc')
+```
+
+
+Top 3 are: 'Fantasy Grounds Unity' has the most (2565 dlcs), while 'Fantasy Grounds Classic' (1973) and 'Rocksmith® 2014 Edition - Remastered' (1555)
+
+### Unpacking platforms
+
+The function cannot be used to this one, as the FALSE and TRUE in this column are associated with it being windows, mac or linux. So here's my solution instead:
 
 ```{r}
 steam_games_df %>% 
   filter(!is.na(windows_mac_linux)) %>%
   separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
-  select(name_app, win, mac, linux) %>% 
-  summarize(n(), sum(as.logical(win)), sum(as.logical(mac)), sum(as.logical(linux)))
+  select(win, mac, linux) %>% 
+  pivot_longer(cols = 1:3, names_to ='platforms', values_to = 'available') %>% 
+  group_by(platforms, available) %>% 
+  summarize(num_games = n()) %>%
+  mutate(perc_games = num_games * 100/ (steam_games_df %>% count() %>% pull()))
+  
+  # old way
+  #summarize(n(), sum(as.logical(win)), sum(as.logical(mac)), sum(as.logical(linux)))
 ```
-And then the two distributions of metacritic (4,762 games) and recommended scores (14,964 games, out of which only 913 have more than 10,000 recommends), separately and together (3,395).
 
-> Notable that GTA V, CS:Global Offensive and PUBG: Battlegrounds have over 1,000,000 recommends! Also, in both cases recommends are following waht appears to be a Poisson distribution
+Only 33 games are NOT for windows (99.96% are), while there's only 20.18% for mac and 13.84% for linux.
 
-> also the correlation between metacritic score and user recommendations seems to be pretty weak, with 0.13 !
+
+## Exploring Other Variables
+
+Next up, looking at some general distributions of other variables - ones that were directly accessible and more straightforward (as opposed to a list of variable size)
+
+### Required Age
+
+```{r}
+steam_games_df %>% 
+  filter(required_age != 0 & required_age < 25) %>% 
+  ggplot(aes(x=required_age)) +
+  geom_histogram(binwidth=1, na.rm=TRUE)
+```
+There is a game called '顶酱', i.e. 'topping sauce' that has required age 120 years. For the games that have a specified age (i.e. not 0, which amounts to 1,527 games) The peak is at 17 (and second highest 18). There is a third peak at 13.
+
+### Free Games
+
+Pretty straightforward:
+
+```{r}
+steam_games_df %>%
+  count(is_free, name='num_games') %>% 
+  mutate(perc_games= num_games*100 / steam_games_df %>% count() %>% pull() )
+```
+Most games are not free; I decided not to collect actual prices, since with Steam sales and other offers, those vary pretty significantly. That is how people fill up their steam libraries to the brim with games they'll never play (but they were discounted)!
+
+### Metacritic and recommends
+
+
+And then the two distributions of metacritic (3,737 games) and recommended scores (13,084  games, out of which only 863 have more than 10,000 recommends). There are also games that have both metacritic and recommendeded score (3,212 games).
 
 ```{r}
 steam_games_df %>% 
@@ -210,11 +365,13 @@ steam_games_df %>%
   cor()
 
 ```
-And then, similarly to before, checking out the distributions of number of screenshots (whole dataset), trailers (whole dataset) and achievements (35,492 games):
+> Notable that GTA V, CS:Global Offensive and PUBG: Battlegrounds have over 1,000,000 recommends! Also, in both cases recommends are following waht appears to be a Poisson distribution
 
-> most games have 5 - 10 screenshots, and the vast majority has 1 trailer
+The correlation between metacritic score and user recommendations seems to be pretty weak, with 0.13! Michael pointed out that this might not be the full story, since I don't know how many downloads of a game there are and similarly, the % of critics who even rate a certain game.
 
-> for achievements it's interesting that besides the initial peak, there's also a clear spike at 100 achievements
+### Screenshots and Trailers
+
+And then, similarly to before, checking out the distributions of number of screenshots (whole dataset), trailers (whole dataset) and achievements (35,233 games):
 
 ```{r}
 steam_games_df %>% 
@@ -233,17 +390,49 @@ steam_games_df %>%
   ggplot(aes(x=achievements)) +
   geom_histogram(binwidth=2, na.rm=TRUE)
 ```
-And finally, looking at the years of release. Like said earlier, 516 don't have a release date, 5,596 are 'coming soon'. There's also 2,820 games that have 'SOON', 'to be announced', 'TBA', and some other stuff - extracted only the relevant ones by finding the ones that have a year - all in all, lost 8,932 games. There are several 'funny' people with games still to be released, in 1969...
+Most games have 5 - 10 screenshots, and the vast majority has 1 trailer
+
+For achievements it's interesting that besides the initial peak, there's also a clear spike at 100 achievements
+
+### Release Year
+
+And finally, looking at the years of release. 516 games don't have a release date, 5,596 are 'coming soon'. There's also 2,820 games that have 'SOON', 'to be announced', 'TBA', and some other stuff (my favorites are 'time is subjective' and 'What even is time anyway?', 'Whenever the gods favour', 'before Mars landing!', 'Long Before Sisyphus Is Done With That Boulder, We Promise', 'Падаем из окна' (falling through the window)) - extracted only the relevant ones by finding the ones that have a year - all in all, lost 8,932 games. There are several 'funny' people with games still to be released... in 1969...
 
 ```{r}
 steam_games_df %>% 
-  #filter(tolower(release_date) != 'coming soon' & release_date != '') %>% 
   select(name_app, release_date) %>% 
   mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
   filter(!is.na(release_year) & release_year < 2023 & release_year > 1996) %>% 
   ggplot(aes(y=release_year)) +
   geom_bar()
+
+steam_games_df %>% 
+  select(name_app, release_date) %>% 
+  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+  filter(is.na(release_year)) %>% 
+  distinct(release_date)
   
+#steam_games_df %>% 
+#  select(name_app, release_date) %>% 
+#  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+#  filter(!is.na(release_year) & release_year < 2005 & release_year > 1996)
+```
+The number of games is steadily increasing! In the early days of Steam there's very few games that still remain to this day. Part of it might be the emergence of other platforms, such as the Epic Games, or Xbox Game Pass and potentially pulling some of their games away from Steam.
+
+```{r}
+steam_games_df %>% 
+  filter(release_date == 'As soon as the unicorns allow it')
 ```
 
+## Exploration based on release year
+
+Next I'm going to look at what would be interesting to show the progression through the years.
+
+```{r}
+filtering_year_df <-steam_games_df %>% 
+  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+  filter(release_year == 2016)
+
+apps_count_by_var(apps_df=filtering_year_df, var_name='genres')
+```
 
