@@ -402,14 +402,25 @@ And finally, looking at the years of release. 516 games don't have a release dat
 steam_games_df %>% 
   select(name_app, release_date) %>% 
   mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-  filter(!is.na(release_year) & release_year < 2023 & release_year > 1996) %>% 
+  filter(!is.na(release_year) & release_year < 2025 & release_year > 2005) %>% 
   ggplot(aes(y=release_year)) +
-  geom_bar()
+  geom_bar(position = 'dodge') #+
+  #theme(axis.text.x = element_text(angle = 90)) +
+  #geom_text(aes(label=release_year), position=position_dodge(width=0.9), vjust=-0.25)
 
 steam_games_df %>% 
   select(name_app, release_date) %>% 
   mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-  filter(is.na(release_year)) %>% 
+  filter(is.na(release_year) & 
+           !str_detect(release_date, '[sS][oO][oO][nN]') &
+           !str_detect(release_date, '[tT][bB][aAdDcC]') &
+           !str_detect(release_date, '[dD][oO][nN][eE]') &
+           !str_detect(release_date, '[wW][iI][sS][hH][lL][iI][sS][tT]') &
+           !str_detect(release_date, '[rR][eE][aA][dD][yY]') &
+           !str_detect(release_date, '[aA][nN][nN][oO][uU][nN][cC][eE]') &
+           !str_detect(release_date, '[dD][eE][mM][oO]') &
+           !str_detect(release_date, '[dD][eE][vV][eE][lL][oO][pP][mM][eE][nN][tT]') &
+           !str_detect(release_date, '[fF][uU][tT][uU][rR][eE]')) %>% 
   distinct(release_date)
   
 #steam_games_df %>% 
@@ -434,5 +445,41 @@ filtering_year_df <-steam_games_df %>%
   filter(release_year == 2016)
 
 apps_count_by_var(apps_df=filtering_year_df, var_name='genres')
+```
+Looking at the publishers and their distribution some more
+
+```{r}
+steam_games_df %>% 
+    filter(!is.na(publishers)) %>%
+    separate_rows(publishers, sep = ';') %>% 
+    select(name_app, publishers) %>%
+    group_by(publishers) %>%
+    summarize(num_publishers = n()) %>% 
+    count(num_publishers, name='num_apps') %>% 
+    mutate(perc_apps = num_apps*100 / steam_games_df %>% count() %>% pull()) %>% 
+    summarize(mean = mean(num_apps), sd = sd(num_apps), q1 = quantile(num_apps, 0.25), median = median(num_apps), q3 = quantile(num_apps, 0.75))
+```
+What about a cumulative sum?
+
+```{r}
+steam_games_df %>% 
+    filter(!is.na(publishers)) %>%
+    separate_rows(publishers, sep = ';') %>% 
+    select(name_app, publishers) %>%
+    group_by(publishers) %>%
+    count(publishers, sort=TRUE, name='num_apps') %>% 
+    ungroup() %>% 
+    mutate(perc_apps = num_apps*100 / steam_games_df %>% count() %>% pull(),
+           cum_sum = cumsum(num_apps))
+
+steam_games_df %>% 
+    filter(!is.na(developers)) %>%
+    separate_rows(developers, sep = ';') %>% 
+    select(name_app, developers) %>%
+    group_by(developers) %>%
+    count(developers, sort=TRUE, name='num_apps') %>% 
+    ungroup() %>% 
+    mutate(perc_apps = num_apps*100 / steam_games_df %>% count() %>% pull(),
+           cum_sum = cumsum(num_apps))
 ```
 
