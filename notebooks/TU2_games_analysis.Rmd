@@ -420,7 +420,12 @@ steam_games_df %>%
            !str_detect(release_date, '[aA][nN][nN][oO][uU][nN][cC][eE]') &
            !str_detect(release_date, '[dD][eE][mM][oO]') &
            !str_detect(release_date, '[dD][eE][vV][eE][lL][oO][pP][mM][eE][nN][tT]') &
-           !str_detect(release_date, '[fF][uU][tT][uU][rR][eE]')) %>% 
+           !str_detect(release_date, '[fF][uU][tT][uU][rR][eE]') &
+           !str_detect(release_date, '[wW][iI][nN][tT][eE][rR]') &
+           !str_detect(release_date, '[sS][pP][rR][iI][nN][gG]') &
+           !str_detect(release_date, '[sS][uU][mM][mM][eE][rR]') &
+           !str_detect(release_date, '[aA][uU][tT][uU][mM][nN]')
+           ) %>% 
   distinct(release_date)
   
 #steam_games_df %>% 
@@ -481,5 +486,13 @@ steam_games_df %>%
     ungroup() %>% 
     mutate(perc_apps = num_apps*100 / steam_games_df %>% count() %>% pull(),
            cum_sum = cumsum(num_apps))
+```
+
+## Finalized Data
+
+Moving on to trying the charts and data in the shiny app..
+
+```{r}
+steam_games_df %>% saveRDS(file='../shiny_app/data/filtered_games_list.rds')
 ```
 
