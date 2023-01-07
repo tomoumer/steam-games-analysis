@@ -3,31 +3,43 @@
 # Define UI for application that draws a histogram
 shinyUI(dashboardPage(
   
+  # skin
+  skin = 'purple',
+  
   # Application title
-  dashboardHeader(title='Steam Games Analysis'),
+  dashboardHeader(title='Steam Games Analysis',
+                  tags$li(a(href = 'https://store.steampowered.com',
+                            icon('steam'),
+                            title = 'To Steam Webpage'),
+                          class = 'dropdown'),
+                  tags$li(a(href = 'https://github.com/tomoumer/steam-games-analysis',
+                            icon('github'),
+                            title= 'To My Github'),
+                          class = 'dropdown')
+                  
+  ),
+  
   
   # Sidebar
   dashboardSidebar(
     sidebarMenu(
-      #menuItem('Dasher', tabName = 'dasher', icon = icon('people-group'), badgeLabel = "team", badgeColor = "green"),
-      menuItem('Overview',tabName = 'overview', icon = icon('database'), badgeLabel = "general", badgeColor = "green"),
-      menuItem('Test',tabName = 'test')
+      menuItem('Navigation', tabName = 'navigation', icon = icon('map-location-dot'), badgeLabel = "start here", badgeColor = "green"),
+      menuItem('Overview',tabName = 'overview', icon = icon('database')),
+      menuItem('Platforms',tabName = 'platforms', icon = icon('linux'))
+      #menuItem('Time Changes',tabName = 'time', icon= icon('business-time'))
     )
   ),
   
   # Main body
   dashboardBody(
     tabItems(
-      #      tabItem(
-      #        tabName= 'dasher',
-      #        fluidRow(
-      #          h2('Team Dasher'),
-      #          p('Meet the team:'),
-      #          tags$ul(
-      #            tags$li('Tomo Umer')
-      #          )
-      #        )
-      #      ),
+      tabItem(
+        tabName= 'navigation',
+        h2('Analysis of Steam Games'),
+        p('To navigate the site use the tabs on the left side.'),
+        p('The sidebar pannel can also be hidden by pressing', icon('bars'), 'on top of the page.'),
+        p('In the top right corner, you can access the Steam store', icon('steam'), 'my github where this code is hosted', icon('github'))
+      ),
       
       
       #              sliderInput('age_range',
@@ -45,57 +57,63 @@ shinyUI(dashboardPage(
       #                          value = c(10, 70)
       #              ),
       
+      # The overview (general) tab
       tabItem(tabName = 'overview',
-              h2('Steam Games by Year'),
-              plotlyOutput('games_by_year'),
-              h2('Steam Games without Relese Year'),
-              box(
-                title = 'Random showcase',
+              h2('Steam Games Releases'),
+              tabBox(
+                #title = "Steam Games Releases",
                 width = 12,
-                background = 'light-blue',
-                p('In the dataset there are 8,932 games with no explicit year of release. I removed some of the booring ones such as "TBD" or "coming soon", only leaving distinct entries.'),
-                p('Below is a random selection of 5 such release dates:'),
-                box(
-                  width= 12,
-                  #align='center',
-                  span(tableOutput('fun_times'), style='color:black'), 
-                  p(''),
-                  actionButton("action", label = "that was fun, give me another five"),
+                # The id lets us use input$tabset1 on the server to find the current tab
+                id = "tabset1",
+                #height = "250px",
+                tabPanel('With Release Year',
+                         plotlyOutput('games_by_year')
                 ),
-                p('TIP: if interested in which game(s) the release date corresponds to, search the table below'),
+                
+                tabPanel('No Release Year',
+                         p('In the dataset there are 8,932 games with no explicit year of release. I removed the "wishlisht" ones and chose all distinct ones.'),
+                         p('Below is a random selection of 5 such release dates:'),
+                         box(
+                           width= 12,
+                           background = 'light-blue',
+                           #align='center',
+                           span(tableOutput('fun_times'), style='color:white'), 
+                           p(''),
+                           actionButton("action", label = "that was fun, give me another five"),
+                         ),
+                         p('TIP: if interested in which game(s) the release date corresponds to, search the table below'),
+                )
               ),
               h2('Steam Games Table'),
               dataTableOutput('games_list')
       ),
       
-      tabItem(tabName = 'test',
+      #
+      tabItem(tabName = 'platforms',
               h2('Test'),
               fluidRow(
-                h2('Fitting'),
-                column(
-                  width=6,
-                  h4('Test 1')
-                ),
-                column(
-                  width=6,
-                  h4('Test 2')
-                )
+                plotlyOutput('platforms_availability')
               ),
-              
               fluidRow(
-                h2('More Fitting'),
-                column(
-                  width=6,
-                  h4('Test 3')
-                ),
-                column(
-                  width=6,
-                  h4('Test 4')
-                )
+                plotlyOutput('platforms_percentage')
               )
-              
-      )
       
+      #fluidRow(
+      #  h2('More Fitting'),
+      #  column(
+      #    width=6,
+      #    h4('Test 3')
+      #    dataTableOutput('pubs_by_year')
+      #  ),
+      #  column(
+      #    width=6,
+      #    h4('Test 4')
+      #    dataTableOutput('devs_by_year')
+      #  )
+      #)
       
-    ))
+    )
+    
+    
+  ))
 ))

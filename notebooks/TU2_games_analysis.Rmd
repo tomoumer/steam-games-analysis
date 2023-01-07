@@ -9,6 +9,7 @@ date: "2022-12-26"
 ```{r}
 library(tidyverse)
 library(lubridate)
+library(plotly)
 ```
 
 ## Exploring the data
@@ -487,12 +488,82 @@ steam_games_df %>%
     mutate(perc_apps = num_apps*100 / steam_games_df %>% count() %>% pull(),
            cum_sum = cumsum(num_apps))
 ```
+Checking distinct publishers and developers over the years
+
+```{r}
+count_unique_var <- function(apps_df, var_name) {
+  apps_summary <- apps_df %>% 
+    filter(!is.na(.data[[var_name]])) %>%
+    mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+    filter(!is.na(release_year) & release_year <= 2022 & release_year >= 1997) %>%
+    separate_rows(.data[[var_name]], sep = ';') %>% 
+    group_by(release_year) %>% 
+    summarize(n_unique_var=n_distinct(.data[[var_name]])) 
+  
+  return(apps_summary)
+}
+
+count_unique_var(apps_df=steam_games_df, var_name='publishers')
+count_unique_var(apps_df=steam_games_df, var_name='developers')
+
+```
+Nothing too interesting there, both devs and publishers are increasing over years
+
+```{r}
+#steam_games_df %>% 
+#    filter(!is.na('publishers')) %>%
+#    mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+#    filter(!is.na(release_year) & release_year <= 2022 & release_year >= 1997) %>%
+#    separate_rows('publishers', sep = ';') %>% 
+#    group_by(release_year) %>% 
+#    summarize(n_distinct(publishers)) 
+
+
+steam_games_df %>% 
+  filter(!is.na(windows_mac_linux)) %>%
+  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+  filter(!is.na(release_year) & release_year <= 2022 & release_year >= 2008) %>%
+  separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
+  group_by(release_year) %>% 
+  summarize(total=n(), num_win=sum(as.logical(win)), num_mac=sum(as.logical(mac)), num_linux=sum(as.logical(linux))) %>% 
+  mutate(perc_win=num_win/total, perc_mac=num_mac/total, perc_linux=num_linux/total) %>% 
+      plot_ly(
+      x = ~release_year,
+      y = ~num_win,
+      #text = ~num_games,
+      #textposition = 'auto',
+      name = "Windows",
+      type = "bar"
+    ) %>%
+  add_trace(y = ~num_mac, name = 'MacOS', marker = list(color = 'rgb(204,204,204)')) %>%
+  add_trace(y = ~num_linux, name = 'Linux', marker = list(color = 'rgb(100,100,100)'))
+
+steam_games_df %>% 
+  filter(!is.na(windows_mac_linux)) %>%
+  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+  filter(!is.na(release_year) & release_year <= 2022 & release_year >= 2008) %>%
+  separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
+  group_by(release_year) %>% 
+  summarize(total=n(), num_win=sum(as.logical(win)), num_mac=sum(as.logical(mac)), num_linux=sum(as.logical(linux))) %>% 
+  mutate(perc_win=num_win/total, perc_mac=num_mac/total, perc_linux=num_linux/total) %>% 
+      plot_ly(
+      x = ~release_year,
+      y = ~perc_mac,
+      name = "MacOS",
+      marker = list(color = 'rgb(204,204,204)'),
+      type = "bar"
+    ) %>%
+  add_trace(y = ~perc_linux, name = 'Linux', marker = list(color = 'rgb(100,100,100)'))
+
+```
+
+
 
 ## Finalized Data
 
 Moving on to trying the charts and data in the shiny app..
 
 ```{r}
-steam_games_df %>% saveRDS(file='../shiny_app/data/filtered_games_list.rds')
+#steam_games_df %>% saveRDS(file='../shiny_app/data/filtered_games_list.rds')
 ```
 
