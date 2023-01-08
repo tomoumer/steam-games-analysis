@@ -247,6 +247,37 @@ steam_games_df %>%
 
 Single-player is still on top, and also the next 15 are just variations on it. First multi-player pairing is only at spot 17. Interestingly though, VR only is at position 7.
 
+Checking out possible connections between categories for a network graph.
+
+```{r}
+categories_list <- steam_games_df %>% 
+    filter(!is.na(categories)) %>%
+    separate_rows(categories, sep = ';') %>% 
+    distinct(categories) %>% 
+    pull()
+
+categories_list %>% view()
+```
+
+```{r}
+count_connections <- 0
+
+for (j in 1:length(categories_list)) {
+  for (i in j:length(categories_list)) {
+    if(steam_games_df %>% 
+       filter(str_detect(categories, categories_list[j]) &
+              str_detect(categories, categories_list[i])) %>% 
+       count() %>% 
+       pull()
+       != 0 ) {count_connections = count_connections + 1} 
+  }
+}
+
+print(count_connections)
+```
+I'd need 697 connections to map out categoreis in a network graph
+
+
 ### Unpacking genres
 
 ```{r}
@@ -269,6 +300,36 @@ steam_games_df %>%
   count() %>% 
   arrange(desc(n))
 ```
+Checking out possible combinations for potentially building a network graph.
+
+
+```{r}
+genres_list <- steam_games_df %>% 
+    filter(!is.na(genres)) %>%
+    separate_rows(genres, sep = ';') %>% 
+    distinct(genres) %>% 
+    pull()
+
+genres_list %>% view()
+```
+
+```{r}
+count_connections <- 0
+
+for (j in 1:length(genres_list)) {
+  for (i in j:length(genres_list)) {
+    if(steam_games_df %>% 
+       filter(str_detect(genres, genres_list[j]) &
+              str_detect(genres, genres_list[i])) %>% 
+       count() %>% 
+       pull()
+       != 0 ) {count_connections = count_connections + 1} 
+  }
+}
+
+print(count_connections)
+```
+If I include all genres, I'll need 422 connections
 
 
 ### Unpacking DLCs
