@@ -10,6 +10,7 @@ date: "2022-12-26"
 library(tidyverse)
 library(lubridate)
 library(plotly)
+library(igraph)
 ```
 
 ## Exploring the data
@@ -262,8 +263,8 @@ categories_list %>% view()
 ```{r}
 count_connections <- 0
 
-for (j in 1:length(categories_list)) {
-  for (i in j:length(categories_list)) {
+for (j in 1:(length(categories_list)-1)) {
+  for (i in (j+1):length(categories_list)) {
     if(steam_games_df %>% 
        filter(str_detect(categories, categories_list[j]) &
               str_detect(categories, categories_list[i])) %>% 
@@ -275,7 +276,7 @@ for (j in 1:length(categories_list)) {
 
 print(count_connections)
 ```
-I'd need 697 connections to map out categoreis in a network graph
+I'd need 659 connections to map out categories in a network graph
 
 
 ### Unpacking genres
@@ -304,32 +305,122 @@ Checking out possible combinations for potentially building a network graph.
 
 
 ```{r}
-genres_list <- steam_games_df %>% 
+apps_count_by_genre <- steam_games_df %>% 
     filter(!is.na(genres)) %>%
     separate_rows(genres, sep = ';') %>% 
-    distinct(genres) %>% 
-    pull()
-
-genres_list %>% view()
+    select(name_app, genres) %>%
+    count(genres, sort=TRUE, name='num_apps') 
 ```
 
 ```{r}
+different_connections <- 0
 count_connections <- 0
 
-for (j in 1:length(genres_list)) {
-  for (i in j:length(genres_list)) {
-    if(steam_games_df %>% 
-       filter(str_detect(genres, genres_list[j]) &
-              str_detect(genres, genres_list[i])) %>% 
+relations <- tibble(from=character(),
+                    to=character(),
+                    num_connections=numeric()
+)
+
+#from = vector('character', 389)
+#to = vector('character', 389)
+
+for (j in 1:(nrow(apps_count_by_genre)-1)) {
+  for (i in (j+1):nrow(apps_count_by_genre)) {
+    count_connections <- steam_games_df %>% 
+       filter(str_detect(genres, (apps_count_by_genre %>% pull(genres))[j]) &
+              str_detect(genres, (apps_count_by_genre %>% pull(genres))[i])) %>% 
        count() %>% 
        pull()
-       != 0 ) {count_connections = count_connections + 1} 
+    
+    if(count_connections != 0 ) {
+      different_connections = different_connections + 1
+      relations <- relations %>% 
+        add_row(from=(apps_count_by_genre %>% pull(genres))[j],
+                to= (apps_count_by_genre %>% pull(genres))[i],
+                num_connections=count_connections)
+    } 
   }
 }
 
-print(count_connections)
+print(different_connections)
+
+
 ```
-If I include all genres, I'll need 422 connections
+If I include all genres, I'll need 389 connections.
+
+Time to do the network graph!!
+
+```{r}
+# to make the igraph
+g <- graph_from_data_frame(relations, directed=FALSE, vertices=apps_count_by_genre)
+```
+
+```{r}
+G <- upgrade_graph(g)
+#L <- layout_in_circle(G)
+L <- layout_nicely(G)
+#L <- layout_with_dh(G)
+
+vs <- V(G)
+es <- as.data.frame(get.edgelist(G))
+Nv <- length(vs)
+Ne <- length(es[1]$V1)
+
+Xn <- L[,1]
+Yn <- L[,2]
+
+unique_names <- unique(c(es$V1, es$V2))
+names(Xn) <- unique_names
+names(Yn) <- unique_names
+
+network <- plot_ly(x = ~Xn, 
+                   y = ~Yn, 
+                   mode = 'markers', 
+                   marker = list(size = 100* (apps_count_by_genre %>% pull(num_apps)) / (apps_count_by_genre %>% select(num_apps) %>% sum())),
+                   #text = vs$label, 
+                   text = paste('Genre:', unique_names, '<br>N. Games:', apps_count_by_genre$num_apps),
+                   hoverinfo = 'text'
+                   )
+
+
+edge_shapes <- list()
+
+for(i in 1:Ne) {
+  v0 <- es[i,]$V1
+  v1 <- es[i,]$V2
+  edge_shape = list(
+    type = 'line',
+    line = list(color = "#030303",
+                width = 30 * (relations %>% pull(num_connections))[i] / (relations %>% 
+  select('num_connections') %>% sum())
+                ),
+    x0 = Xn[v0],
+    y0 = Yn[v0],
+    x1 = Xn[v1],
+    y1 = Yn[v1]
+  )
+  edge_shapes[[i]] <- edge_shape
+}
+
+axis <- list(title = "", showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+
+
+fig <- layout(
+  network,
+  title = 'Genres Network',
+  shapes = edge_shapes,
+  xaxis = axis,
+  yaxis = axis
+)
+
+fig
+
+```
+
+```{r}
+steam_games_df %>% 
+  filter(str_detect(genres, '360 Video'))
+```
 
 
 ### Unpacking DLCs
