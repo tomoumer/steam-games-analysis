@@ -1,0 +1,232 @@
+---
+title: "TU3_advanced_graphs"
+output: html_document
+date: "2023-01-11"
+---
+
+# More complex graphs prep for the shiny app
+
+```{r}
+library(tidyverse)
+library(plotly)
+library(igraph)
+```
+
+## reading in the data and filtering to get just the games
+
+> note: I might expand on this at a later date
+
+```{r}
+steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds') %>% 
+  distinct(name_app, .keep_all= TRUE)
+```
+
+```{r}
+steam_games_df <- steam_apps_df%>% 
+  filter(type=='game') %>% 
+  select(-type)
+```
+
+## Network Graph - Categories
+
+Checking out possible connections between categories for a network graph.
+
+```{r}
+categories_list <- steam_games_df %>% 
+    filter(!is.na(categories)) %>%
+    separate_rows(categories, sep = ';') %>% 
+    distinct(categories) %>% 
+    pull()
+```
+
+```{r}
+count_connections <- 0
+
+for (j in 1:(length(categories_list)-1)) {
+  for (i in (j+1):length(categories_list)) {
+    if(steam_games_df %>% 
+       filter(str_detect(categories, categories_list[j]) &
+              str_detect(categories, categories_list[i])) %>% 
+       count() %>% 
+       pull()
+       != 0 ) {count_connections = count_connections + 1} 
+  }
+}
+
+print(count_connections)
+```
+
+I'd need 659 connections to map out categories in a network graph
+
+## Network Graph - Genres
+
+Checking out possible combinations for potentially building a network graph. This turned out to be a much better idea than categories.
+
+```{r}
+apps_count_by_genre <- steam_games_df %>% 
+    filter(!is.na(genres)) %>%
+    separate_rows(genres, sep = ';') %>% 
+    select(name_app, genres) %>%
+    count(genres, sort=TRUE, name='num_apps') 
+```
+
+```{r}
+different_connections <- 0
+count_connections <- 0
+
+relations <- tibble(from=character(),
+                    to=character(),
+                    num_connections=numeric()
+)
+
+for (j in 1:(nrow(apps_count_by_genre)-1)) {
+  for (i in (j+1):nrow(apps_count_by_genre)) {
+    count_connections <- steam_games_df %>% 
+       filter(str_detect(genres, (apps_count_by_genre %>% pull(genres))[j]) &
+              str_detect(genres, (apps_count_by_genre %>% pull(genres))[i])) %>% 
+       count() %>% 
+       pull()
+    
+    if(count_connections != 0 ) {
+      different_connections = different_connections + 1
+      relations <- relations %>% 
+        add_row(from=(apps_count_by_genre %>% pull(genres))[j],
+                to= (apps_count_by_genre %>% pull(genres))[i],
+                num_connections=count_connections)
+    } 
+  }
+}
+
+print(different_connections)
+
+
+```
+
+If I include all genres, I'll need 389 connections. However. Cat sudoku is the only one that has like 3 categories that no other game has. I also started doing some testing. If I filter out any genres with less than 10 connections between, I loose 196 connections! 224 filtering on less than 20, 242 at less than 30, 261 at less than 40, 273 less than 50. 301 connections at less than 100.
+
+Also with less than 10 counts of connections, I loose 6 genre categories right away., 20 loose 6; then have to go up to 80 to loose 7, 90 to loose 11. So filtering on 100 (just to have a round number instead of 90), will alow me to get rid of 11 genres that are very rarely represented.
+
+Looking below, by cutting at less than 31 connections, I only loose 0.495% of overall number of connections (suggested possible cutoff at 0.5% by Michael). With it, I lose the following 7 genres: Accounting (24 games), Movie (2 games), 360 Video (1 game), Documentary (1 game), Episodic (1 game), Short (1 game), Tutorial (1 game)
+
+```{r}
+relations %>% 
+  filter(num_connections < 32) %>% 
+  summarize(sum(num_connections)) %>% 
+  pull() / relations %>% summarize(sum(num_connections)) %>% pull()
+
+```
+
+
+```{r}
+rel_from <- relations %>% 
+  filter(num_connections >= 32) %>% 
+  distinct(from)
+
+rel_to <- relations %>% 
+  filter(num_connections >= 32) %>% 
+  distinct(to)
+
+genres_filtered <- rel_from %>% 
+  full_join(rel_to, by=c('from'='to')) %>% 
+  pull()
+
+```
+
+```{r}
+apps_count_by_genre_filtered <- apps_count_by_genre %>% 
+  filter(genres %in% genres_filtered)
+
+relations_filtered <- relations %>% 
+  filter(num_connections >= 32)
+```
+
+```{r}
+# attempted to weight the connections, didn't yield results I wanted
+#relations_weighted <- relations_filtered %>%
+#  left_join(apps_count_by_genre_filtered, by=c('from'='genres')) %>% 
+#  rename(from_num_apps=num_apps) %>% 
+#  left_join(apps_count_by_genre_filtered, by=c('to'='genres')) %>% 
+#  rename(to_num_apps=num_apps) %>% 
+#  mutate(adjusted_connections= num_connections / pmin(from_num_apps, to_num_apps)) %>% 
+#  select(from, to, adjusted_connections)
+
+# also have to add this code below
+# width = if_else((relations_weighted %>% pull(adjusted_connections))[i] > 0.5, (relations_weighted %>% pull(adjusted_connections))[i], 0)
+```
+
+
+Time to do the network graph!!
+
+```{r}
+# to make the igraph
+g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=apps_count_by_genre_filtered)
+```
+
+```{r}
+G <- upgrade_graph(g)
+#L <- layout_in_circle(G)
+#set.seed(300)
+#L <- layout_nicely(G)
+#L <- layout_with_dh(G)
+
+L <- candidate_layout_01
+
+vs <- V(G)
+es <- as.data.frame(get.edgelist(G))
+Nv <- length(vs)
+Ne <- length(es[1]$V1)
+
+Xn <- L[,1]
+Yn <- L[,2]
+
+unique_names <- unique(c(es$V1, es$V2))
+names(Xn) <- unique_names
+names(Yn) <- unique_names
+
+network <- plot_ly(x = ~Xn, 
+                   y = ~Yn, 
+                   mode = 'markers', 
+                   marker = list(size = 100* (apps_count_by_genre_filtered %>% pull(num_apps)) / (apps_count_by_genre_filtered %>% select(num_apps) %>% sum()),
+                                 opacity = 0.7),
+                   #text = vs$label, 
+                   text = paste(unique_names, '<br>', apps_count_by_genre_filtered$num_apps),
+                   texttemplate = if_else(100* (apps_count_by_genre_filtered %>% pull(num_apps)) / (apps_count_by_genre_filtered %>% select(num_apps) %>% sum()) >10, paste(unique_names, '<br>', apps_count_by_genre_filtered$num_apps), ''),
+                   hoverinfo = 'text'
+                   ) %>% 
+  add_text(textposition= 'right')
+
+
+edge_shapes <- list()
+
+for(i in 1:Ne) {
+  v0 <- es[i,]$V1
+  v1 <- es[i,]$V2
+  edge_shape = list(
+    type = 'line',
+    line = list(color = "#030303",
+                width = 30 * (relations_filtered %>% pull(num_connections))[i] / (relations_filtered %>% select('num_connections') %>% sum())
+                ),
+    x0 = Xn[v0],
+    y0 = Yn[v0],
+    x1 = Xn[v1],
+    y1 = Yn[v1]
+  )
+  edge_shapes[[i]] <- edge_shape
+}
+
+axis <- list(title = "", showgrid = FALSE, showticklabels = FALSE, zeroline = FALSE)
+
+
+fig <- layout(
+  network,
+  title = 'Genres Network',
+  shapes = edge_shapes,
+  xaxis = axis,
+  yaxis = axis
+)
+
+fig
+
+
+
+```
