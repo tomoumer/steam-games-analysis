@@ -25,8 +25,8 @@ shinyUI(dashboardPage(
     sidebarMenu(
       menuItem('Navigation', tabName = 'navigation', icon = icon('map-location-dot'), badgeLabel = "start here", badgeColor = "green"),
       menuItem('Overview',tabName = 'overview', icon = icon('database')),
-      menuItem('Platforms',tabName = 'platforms', icon = icon('linux'))
-      #menuItem('Time Changes',tabName = 'time', icon= icon('business-time'))
+      menuItem('Platforms',tabName = 'platforms', icon = icon('linux')),
+      menuItem('Genres',tabName = 'genres', icon = icon('dice-d20'))
     )
   ),
   
@@ -41,21 +41,6 @@ shinyUI(dashboardPage(
         p('In the top right corner, you can access the Steam store', icon('steam'), 'my github where this code is hosted', icon('github'))
       ),
       
-      
-      #              sliderInput('age_range',
-      #                          label = h3('house age range'),
-      #                          min = steam_games_df %>%
-      #                            mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-      #                            filter(!is.na(release_year) & release_year < 2025 & release_year > 2005) %>% 
-      #                            pull(release_date) %>% 
-      #                            min(),
-      #                          max = steam_games_df %>% 
-      #                            mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-      #                            filter(!is.na(release_year) & release_year < 2025 & release_year > 2005) %>% 
-      #                            pull(release_date) %>% 
-      #                            max(),
-      #                          value = c(10, 70)
-      #              ),
       
       # The overview (general) tab
       tabItem(tabName = 'overview',
@@ -79,7 +64,7 @@ shinyUI(dashboardPage(
                            #align='center',
                            span(tableOutput('fun_times'), style='color:white'), 
                            p(''),
-                           actionButton("action", label = "that was fun, give me another five"),
+                           actionButton('random_five', label = 'Show me five random games!', icon= icon('dice')),
                          ),
                          p('TIP: if interested in which game(s) the release date corresponds to, search the table below'),
                 )
@@ -90,7 +75,7 @@ shinyUI(dashboardPage(
       
       #
       tabItem(tabName = 'platforms',
-              h2('Test'),
+              h2('Availability on Platforms'),
               fluidRow(
                 plotlyOutput('platforms_availability')
               ),
@@ -112,6 +97,28 @@ shinyUI(dashboardPage(
       #  )
       #)
       
+    ),
+    
+    tabItem(tabName = 'genres',
+            h2('Video Game Genres'),
+            sliderInput('release_years',
+                        label = h3('Years Selection'),
+                        min = steam_games_df %>%
+                          mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+                          filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997) %>% 
+                          pull(release_year) %>% 
+                          min() %>% 
+                          as.numeric(),
+                        max = steam_games_df %>% 
+                          mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+                          filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997)  %>% 
+                          pull(release_year) %>% 
+                          max() %>% 
+                          as.numeric(),
+                        value = c(1997, 2023)
+            ),
+            actionButton('draw_network', label = "Draw Network"),
+            plotlyOutput('genres_network')
     )
     
     
