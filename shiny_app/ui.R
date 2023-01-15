@@ -33,12 +33,32 @@ shinyUI(dashboardPage(
   
   # Main body
   dashboardBody(
-    # tags
-    tags$style('input[type=checkbox] {
-                    transform: scale(1.5);
-           }'),
     
-    
+    box(
+      title = 'Filters',
+      width=12,
+      background='purple',
+      collapsible = TRUE,
+      sliderInput('release_years_filter',
+                  label = 'Select Games Release Years',
+                  sep='',
+                  min = steam_games_df %>%
+                    filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997) %>% 
+                    pull(release_year) %>% 
+                    min() %>% 
+                    as.numeric(),
+                  max = steam_games_df %>% 
+                    filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997)  %>% 
+                    pull(release_year) %>% 
+                    max() %>% 
+                    as.numeric(),
+                  value = c(2008, 2022),
+                  ticks=FALSE,
+                  pre='year '
+                  #animate=TRUE
+      )
+    ),
+
     tabItems(
       tabItem(
         tabName= 'navigation',
@@ -55,7 +75,8 @@ shinyUI(dashboardPage(
                 box(
                   title = h2('Steam Games Highlights'), width=12,
                   status = 'primary', solidHeader = FALSE, collapsible = FALSE,
-                  checkboxInput('check_released', label = 'Hide unreleased games?', value = FALSE),
+                  actionButton('show_hide_games', label = 'Hide unreleased games', icon=icon('eye-slash'))
+                  #checkboxInput('check_released', label = 'Hide unreleased games?', value = FALSE),
                 )
               ),
               fluidRow(
@@ -76,32 +97,19 @@ shinyUI(dashboardPage(
               fluidRow(
                 box(
                   title = h2('Trends over Time'), width=12,
-                  status = 'primary', solidHeader = FALSE, collapsible = FALSE,
-                  sliderInput('release_years_filter',
-                              label = h3('Select Years of Interest'),
-                              min = steam_games_df %>%
-                                mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-                                filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997) %>% 
-                                pull(release_year) %>% 
-                                min() %>% 
-                                as.numeric(),
-                              max = steam_games_df %>% 
-                                mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-                                filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997)  %>% 
-                                pull(release_year) %>% 
-                                max() %>% 
-                                as.numeric(),
-                              value = c(2008, 2022)
-                  )
+                  status = 'primary', solidHeader = FALSE, collapsible = FALSE
                 )
               ),
-              fluidRow(
-                plotlyOutput('top5_genres')
-              ),
-
-              fluidRow(
-                plotlyOutput('platforms_percentage')
+              tabBox(
+                #title = "First tabBox",
+                id = "tabset1",
+                width=12,
+                tabPanel('Genres', plotlyOutput('top5_genres')),
+                tabPanel('OS', plotlyOutput('platforms_percentage')),
+                tabPanel('Other', plotlyOutput('other_stats'))
               )
+              
+
               
       ),
       
@@ -110,26 +118,10 @@ shinyUI(dashboardPage(
                 box(
                   title = h2('Video Game Genres'), width=12,
                   status = 'primary', solidHeader = FALSE, collapsible = FALSE,
-                  sliderInput('release_years',
-                              label = h3('Years Selection'),
-                              min = steam_games_df %>%
-                                mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-                                filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997) %>% 
-                                pull(release_year) %>% 
-                                min() %>% 
-                                as.numeric(),
-                              max = steam_games_df %>% 
-                                mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-                                filter(!is.na(release_year) & release_year <= 2023 & release_year >= 1997)  %>% 
-                                pull(release_year) %>% 
-                                max() %>% 
-                                as.numeric(),
-                              value = c(1997, 2022)
-                  ),
                   actionButton('draw_network', label = "Draw Network"),
                 )
               ),
-
+              
               plotlyOutput('genres_network')
       ),
       
@@ -148,10 +140,7 @@ shinyUI(dashboardPage(
               p('TIP: if interested in which game(s) the release date corresponds to, search the table below'),
               h2('Steam Games Table'),
               dataTableOutput('games_list')
-              
-              
       )
-      
       
     ))
 ))

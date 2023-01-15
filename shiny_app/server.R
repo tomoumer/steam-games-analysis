@@ -11,15 +11,19 @@ shinyServer(function(input, output, session) {
   
   
   observe({
-    if(input$check_released) {
+    if(input$show_hide_games %% 2 == 0) {
+      v$steam_games_release <- steam_games_df
+      
+      v$graph_colors <- c('#1f77b4', '#9467bd')
+      
+      updateActionButton(session, 'show_hide_games', label = 'Hide unreleased games', icon=icon('eye-slash'))
+    } else {
       v$steam_games_release <- steam_games_df %>% 
         filter(!is.na(release_year) & release_year <= 2022 & release_year >= 1997)
       
       v$graph_colors <- c('#1f77b4')
-    } else {
-      v$steam_games_release <- steam_games_df
       
-      v$graph_colors <- c('#1f77b4', '#9467bd')
+      updateActionButton(session, 'show_hide_games', label = 'Show unreleased games', icon=icon('eye'))
     }
   })
   
@@ -96,7 +100,7 @@ shinyServer(function(input, output, session) {
   
   output$games_by_year <- renderPlotly({
     v$steam_games_release %>%
-      mutate(release_year=replace_na(release_year, '3333'),
+      mutate(release_year=replace_na(release_year, 'unknown'),
              release_type=if_else((release_year >= 1997 & release_year <=2022), 'Released', 'Unreleased')) %>%
       count(release_year, release_type, name='num_games') %>% 
       plot_ly(
@@ -138,8 +142,8 @@ shinyServer(function(input, output, session) {
       group_by(release_year) %>% 
       mutate(games_per_year=n_distinct(name_app)) %>% 
       group_by(release_year, genres) %>% 
-      summarize(genres_by_year=n()/min(games_per_year)) %>% 
-      slice_max(order_by = genres_by_year, n=5) %>% 
+      summarize(genres_by_year=100*n()/min(games_per_year)) %>% 
+      slice_max(order_by = genres_by_year, n=6) %>% 
       ungroup() %>% 
       plot_ly(
         x = ~release_year,
@@ -163,7 +167,7 @@ shinyServer(function(input, output, session) {
       separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
       group_by(release_year) %>% 
       summarize(total=n(), num_win=sum(as.logical(win)), num_mac=sum(as.logical(mac)), num_linux=sum(as.logical(linux))) %>% 
-      mutate(perc_win=num_win/total, perc_mac=num_mac/total, perc_linux=num_linux/total) %>% 
+      mutate(perc_win=100*num_win/total, perc_mac=100*num_mac/total, perc_linux=100*num_linux/total) %>% 
       plot_ly(
         x = ~release_year,
         y = ~perc_win,
@@ -171,17 +175,40 @@ shinyServer(function(input, output, session) {
         type = "scatter",
         mode= 'lines'
       ) %>%
-      add_trace(y = ~perc_mac, name = 'Linux') %>% 
+      add_trace(y = ~perc_mac, name = 'Mac OS') %>% 
       add_trace(y = ~perc_linux, name = 'Linux') %>% 
       layout(title = 'Operating Systems',
              xaxis = list(title = 'Year'),
              yaxis = list(title = 'Percentage of Video Games'))
   })
   
+  output$other_stats <- renderPlotly({
+    steam_games_df %>% 
+      filter(!is.na(release_year) &
+               release_year >= input$release_years_filter[1] &
+               release_year <= input$release_years_filter[2]) %>%
+      group_by(release_year) %>% 
+      summarize(perc_free=100*sum(is_free)/n(), perc_dlc=100*sum(!is.na(dlc))/n(), perc_achievements=100*sum(!is.na(achievements))/n()) %>% 
+      plot_ly(
+        x = ~release_year,
+        y = ~perc_achievements,
+        name ='Achievements',
+        type = "scatter",
+        mode= 'lines'
+      ) %>% 
+      add_trace(y = ~perc_dlc, name = 'DLC') %>%
+      add_trace(y = ~perc_free, name = 'Free') %>% 
+      layout(title = 'Games with given attributes',
+             xaxis = list(title = 'Year'),
+             yaxis = list(title = 'Percentage of Video Games'))
+    
+  })
+  
   # ============ GENRES tab
   observeEvent(input$draw_network, {
     v$vertices_filtered <- apps_count_by_genre_year %>% 
-      filter(release_year >= input$release_years[1] & release_year <= input$release_years[2]) %>% 
+      filter(release_year >= input$release_years_filter[1] &
+               release_year <= input$release_years_filter[2]) %>% 
       group_by(genres) %>% 
       summarize(num_apps=sum(num_apps)) %>% 
       arrange(desc(num_apps))
@@ -189,7 +216,8 @@ shinyServer(function(input, output, session) {
   
   observeEvent(input$draw_network, {
     v$relations_filtered <- genres_relations_df %>% 
-      filter(release_year >= input$release_years[1] & release_year <= input$release_years[2])  %>% 
+      filter(release_year >= input$release_years_filter[1] &
+               release_year <= input$release_years_filter[2])  %>% 
       group_by(from, to) %>% 
       summarize(num_connections=sum(num_connections)) %>% 
       ungroup()
