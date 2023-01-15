@@ -5,26 +5,24 @@ library(plotly)
 library(igraph)
 
 steam_games_df <- readRDS('data/filtered_games_list.rds') %>% 
-  mutate(release_year=str_extract(release_date, '\\d{4}')) 
+  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+  mutate(release_year=replace(release_year, is.na(release_year) |
+                                release_year < 1997 |
+                                release_year > 2023, 'unknown'))
 
 genres_relations_df <- readRDS('data/genres_relations.rds')
 
-count_unique_var <- function(apps_df, var_name) {
-  apps_summary <- apps_df %>% 
-    filter(!is.na(.data[[var_name]]) & !is.na(release_year) & release_year <= 2022 & release_year >= 1997) %>%
-    separate_rows(.data[[var_name]], sep = ';') %>% 
-    group_by(release_year) %>% 
-    summarize(n_unique_var=n_distinct(.data[[var_name]])) 
-  
-  return(apps_summary)
-}
-
-# this below could be a function too
-apps_count_by_genre_year <- steam_games_df %>% 
-  filter(!is.na(genres) & !is.na(release_year) & release_year >= 1997 & release_year <= 2023) %>%
+top_genres_list <- steam_games_df %>% 
   separate_rows(genres, sep = ';') %>% 
-  select(name_app, release_year, genres) %>%
-  count(genres, release_year, sort=TRUE, name='num_apps')
+  count(genres, sort=TRUE, name='num_apps') %>% 
+  head(12) %>% 
+  pull(genres)
+
+top_categories_list <- steam_games_df %>% 
+  separate_rows(categories, sep = ';') %>% 
+  count(categories, sort=TRUE, name='num_apps') %>% 
+  head(12) %>% 
+  pull(categories)
 
 random_phrases <- c('That was fun, give me another five!',
                     'Ok, just one more time...',
