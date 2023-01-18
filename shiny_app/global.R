@@ -24,6 +24,7 @@ top_categories_list <- steam_games_df %>%
   head(12) %>% 
   pull(categories)
 
+
 random_phrases <- c('That was fun, give me another five!',
                     'Ok, just one more time...',
                     'Stanley ... is that you?',

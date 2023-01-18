@@ -12,6 +12,29 @@ shinyServer(function(input, output, session) {
   
   observe({
     if(input$show_hide_games %% 2 == 0) {
+      v$steam_games_filtered <- steam_games_df %>% 
+        filter(release_year != 'unknown' &
+                 release_year != '2023' &
+                 release_year >= input$release_years_filter[1] &
+                 release_year <= input$release_years_filter[2])
+      
+      v$vertices_filtered <- v$steam_games_filtered %>% 
+        separate_rows(genres, sep = ';') %>% 
+        count(genres, sort=TRUE, name='num_apps')
+      
+      v$relations_filtered <- genres_relations_df %>% 
+        filter(release_year != 'unknown' &
+                 release_year != '2023' &
+                 release_year >= input$release_years_filter[1] &
+                 release_year <= input$release_years_filter[2]) %>% 
+        group_by(from, to) %>% 
+        summarize(num_connections=sum(num_connections)) %>% 
+        ungroup()
+      
+      v$graph_colors <- c('#1f77b4')
+      
+      updateActionButton(session, 'show_hide_games', label = 'Show unreleased', icon=icon('eye'))
+    } else {
       # this first filter is a little convoluted ...
       # it's checking for the unreleased games, or, otherwise based on year filter
       v$steam_games_filtered <- steam_games_df %>% 
@@ -36,29 +59,6 @@ shinyServer(function(input, output, session) {
       v$graph_colors <- c('#1f77b4', '#9467bd')
       
       updateActionButton(session, 'show_hide_games', label = 'Hide unreleased', icon=icon('eye-slash'))
-    } else {
-      v$steam_games_filtered <- steam_games_df %>% 
-        filter(release_year != 'unknown' &
-                 release_year != '2023' &
-                 release_year >= input$release_years_filter[1] &
-                 release_year <= input$release_years_filter[2])
-      
-      v$vertices_filtered <- v$steam_games_filtered %>% 
-        separate_rows(genres, sep = ';') %>% 
-        count(genres, sort=TRUE, name='num_apps')
-      
-      v$relations_filtered <- genres_relations_df %>% 
-        filter(release_year != 'unknown' &
-                 release_year != '2023' &
-                 release_year >= input$release_years_filter[1] &
-                 release_year <= input$release_years_filter[2]) %>% 
-        group_by(from, to) %>% 
-        summarize(num_connections=sum(num_connections)) %>% 
-        ungroup()
-      
-      v$graph_colors <- c('#1f77b4')
-      
-      updateActionButton(session, 'show_hide_games', label = 'Show unreleased', icon=icon('eye'))
     }
   })
   
@@ -131,7 +131,7 @@ shinyServer(function(input, output, session) {
     )
   })
   
-  
+
   
   output$games_by_year <- renderPlotly({
     v$steam_games_filtered %>%
@@ -152,12 +152,24 @@ shinyServer(function(input, output, session) {
       layout(title = 'Video Game Releases over Years',
              xaxis = list(title = 'Year'),
              yaxis = list(title = 'Number of Video Games'),
-             legend = list(x = 0.1, y = 0.9))
+             legend = list(x = 0.1, y = 0.9)
+             )
   })
   
   
   
   # ===== GAMES OVER TIME (TRENDS)
+  
+  observe({
+    if(input$num_or_perc %% 2 == 0) {
+      
+      updateActionButton(session, 'num_or_perc', label = 'Show Values', icon=icon('calculator'))
+    } else {
+      
+      updateActionButton(session, 'num_or_perc', label = 'Show Percentage', icon=icon('percent'))
+    }
+  })
+  
   
   output$top_genres <- renderPlotly({
     v$steam_games_filtered %>% 
@@ -166,7 +178,11 @@ shinyServer(function(input, output, session) {
       group_by(release_year) %>% 
       mutate(games_per_year=n_distinct(name_app)) %>% 
       group_by(release_year, genres) %>% 
-      summarize(genres_by_year=100*n()/min(games_per_year)) %>% 
+      summarize(genres_by_year = if_else(input$num_or_perc %% 2 == 0,
+                                         100*n()/min(games_per_year),
+                                         as.double(n())
+      )
+      ) %>% 
       #slice_max(order_by = genres_by_year, n=7) %>% 
       ungroup() %>% 
       plot_ly(
@@ -190,7 +206,10 @@ shinyServer(function(input, output, session) {
       group_by(release_year) %>% 
       mutate(games_per_year=n_distinct(name_app)) %>% 
       group_by(release_year, categories) %>% 
-      summarize(categories_by_year=100*n()/min(games_per_year)) %>% 
+      summarize(categories_by_year=if_else(input$num_or_perc %% 2 == 0,
+                                           100*n()/min(games_per_year),
+                                           as.double(n())
+      )) %>% 
       ungroup() %>% 
       plot_ly(
         x = ~release_year,
@@ -210,8 +229,10 @@ shinyServer(function(input, output, session) {
     v$steam_games_filtered %>% 
       separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
       group_by(release_year) %>% 
-      summarize(total=n(), num_win=sum(as.logical(win)), num_mac=sum(as.logical(mac)), num_linux=sum(as.logical(linux))) %>% 
-      mutate(perc_win=100*num_win/total, perc_mac=100*num_mac/total, perc_linux=100*num_linux/total) %>% 
+      summarize(perc_win= if_else(input$num_or_perc %% 2 == 0, 100*sum(as.logical(win))/n(), as.double(sum(as.logical(win)))),
+                perc_mac= if_else(input$num_or_perc %% 2 == 0, 100*sum(as.logical(mac))/n(), as.double(sum(as.logical(mac)))),
+                perc_linux= if_else(input$num_or_perc %% 2 == 0, 100*sum(as.logical(linux))/n(), as.double(sum(as.logical(linux))))
+      )%>% 
       plot_ly(
         x = ~release_year,
         y = ~perc_win,
@@ -229,11 +250,12 @@ shinyServer(function(input, output, session) {
   output$other_stats <- renderPlotly({
     v$steam_games_filtered %>% 
       group_by(release_year) %>% 
-      summarize(perc_is_free=100*sum(is_free)/n(),
-                perc_has_dlc=100*sum(!is.na(dlc))/n(),
-                perc_has_achievements=100*sum(!is.na(achievements))/n(),
-                perc_has_metacritic=100*sum(!is.na(metacritic))/n(),
-                perc_has_recommended=100*sum(!is.na(recommended))/n()) %>% 
+      summarize(perc_is_free= if_else(input$num_or_perc %% 2 == 0, 100*sum(is_free)/n(), as.double(sum(is_free))),
+                perc_has_dlc= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(dlc))/n(), as.double(sum(!is.na(dlc)))),
+                perc_has_achievements= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(achievements))/n(), as.double(sum(!is.na(achievements)))),
+                perc_has_metacritic= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(metacritic))/n(), as.double(sum(!is.na(metacritic)))),
+                perc_has_recommended= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(recommended))/n(), as.double(sum(!is.na(recommended))))
+      ) %>% 
       plot_ly(
         x = ~release_year,
         y = ~perc_has_achievements,
@@ -258,10 +280,12 @@ shinyServer(function(input, output, session) {
       mutate(n_publishers = replace_na(n_publishers, 0),
              n_developers = replace_na(n_developers, 0)) %>% 
       group_by(release_year) %>% 
-      summarize(secreenshots_per_game=sum(n_screenshots)/n(),
-                trailers_per_game=sum(n_trailers)/n(),
-                publishers_per_game=sum(n_publishers)/n(),
-                developers_per_game=sum(n_developers)/n()) %>% 
+      summarize(secreenshots_per_game= if_else(input$num_or_perc %% 2 == 0, sum(n_screenshots)/n(), as.double(sum(n_screenshots))),
+                trailers_per_game= if_else(input$num_or_perc %% 2 == 0, sum(n_trailers)/n(), as.double(sum(n_trailers)))#,
+                # decided not to use devs and publishers
+                #publishers_per_game= if_else(input$num_or_perc %% 2 == 0, sum(n_publishers)/n(), as.double(sum(n_publishers))),
+                #developers_per_game= if_else(input$num_or_perc %% 2 == 0, sum(n_developers)/n(), as.double(sum(n_developers)))
+      ) %>% 
       plot_ly(
         x = ~release_year,
         y = ~secreenshots_per_game,
@@ -270,9 +294,9 @@ shinyServer(function(input, output, session) {
         mode= 'lines'
       ) %>% 
       add_trace(y = ~trailers_per_game, name = 'Trailers') %>%
-      add_trace(y = ~publishers_per_game, name = 'Publishers') %>%
-      add_trace(y = ~developers_per_game, name = 'Developers') %>%
-      layout(title = 'Number of Devs/Pubs/Trailers/Screenshots per game',
+      #add_trace(y = ~publishers_per_game, name = 'Publishers') %>%
+      #add_trace(y = ~developers_per_game, name = 'Developers') %>%
+      layout(title = 'Number of Trailers or Screenshots per game',
              xaxis = list(title = 'Year'),
              yaxis = list(title = 'Average'))
   })
