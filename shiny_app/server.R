@@ -7,7 +7,7 @@ shinyServer(function(input, output, session) {
   v <- reactiveValues(vertices_filtered = NULL,
                       relations_filtered = NULL,
                       steam_games_filtered = NULL,
-                      graph_colors = c('#1f77b4', '#9467bd'))
+                      graph_colors = c('#367fa9', '#1b2838'))
   
   
   observe({
@@ -31,9 +31,9 @@ shinyServer(function(input, output, session) {
         summarize(num_connections=sum(num_connections)) %>% 
         ungroup()
       
-      v$graph_colors <- c('#1f77b4')
+      v$graph_colors <- c('#367fa9')
       
-      updateActionButton(session, 'show_hide_games', label = 'Show unreleased', icon=icon('eye'))
+      updateActionButton(session, 'show_hide_games', label = 'Show Unreleased', icon=icon('eye'))
     } else {
       # this first filter is a little convoluted ...
       # it's checking for the unreleased games, or, otherwise based on year filter
@@ -56,45 +56,47 @@ shinyServer(function(input, output, session) {
         summarize(num_connections=sum(num_connections)) %>% 
         ungroup()
       
-      v$graph_colors <- c('#1f77b4', '#9467bd')
+      v$graph_colors <- c('#367fa9', '#1b2838')
       
-      updateActionButton(session, 'show_hide_games', label = 'Hide unreleased', icon=icon('eye-slash'))
+      updateActionButton(session, 'show_hide_games', label = 'Hide Unreleased', icon=icon('eye-slash'))
     }
   })
   
   # ====== OVERVIEW ========
   output$num_games <- renderValueBox({
     valueBox(
-      v$steam_games_filtered %>% 
-        count() %>% 
-        pull(),
+      format(v$steam_games_filtered %>%
+               count() %>% pull(),
+             big.mark   = ','),
       'Number of Games',
       icon = icon("gamepad"),
-      color = "purple"
+      color = "black"
     )
   })
   
   output$num_publishers <- renderValueBox({
     valueBox(
-      v$steam_games_filtered %>% 
+      format(v$steam_games_filtered %>% 
         separate_rows(publishers, sep = ';') %>% 
         summarize(n_distinct(publishers, na.rm=TRUE)) %>% 
         pull(),
+        big.mark   = ','),
       'Number of Publishers',
       icon = icon("person-dots-from-line"),
-      color = "purple"
+      color = "black"
     )
   })
   
   output$num_developers <- renderValueBox({
     valueBox(
-      v$steam_games_filtered %>% 
+      format(v$steam_games_filtered %>% 
         separate_rows(developers, sep = ';') %>% 
         summarize(n_distinct(developers, na.rm=TRUE)) %>% 
         pull(),
+        big.mark   = ','),
       'Number of Developers',
       icon = icon("person-digging"),
-      color = "purple"
+      color = "black"
     )
   })
   
@@ -131,7 +133,7 @@ shinyServer(function(input, output, session) {
     )
   })
   
-
+  
   
   output$games_by_year <- renderPlotly({
     v$steam_games_filtered %>%
@@ -153,7 +155,11 @@ shinyServer(function(input, output, session) {
              xaxis = list(title = 'Year'),
              yaxis = list(title = 'Number of Video Games'),
              legend = list(x = 0.1, y = 0.9)
-             )
+      ) %>% 
+      config(displayModeBar = FALSE)
+    # if wanting to just hide some of the controls but not all:
+    #config(displaylogo = FALSE,
+    #       modeBarButtonsToRemove = c('toImage','zoomIn2d','zoomOut2d','zoom2d','pan2d','select2d','lasso2d','autoScale2d'))
   })
   
   
@@ -163,10 +169,10 @@ shinyServer(function(input, output, session) {
   observe({
     if(input$num_or_perc %% 2 == 0) {
       
-      updateActionButton(session, 'num_or_perc', label = 'Show Values', icon=icon('calculator'))
+      updateActionButton(session, 'num_or_perc', label = 'Display Total Values', icon=icon('calculator'))
     } else {
       
-      updateActionButton(session, 'num_or_perc', label = 'Show Percentage', icon=icon('percent'))
+      updateActionButton(session, 'num_or_perc', label = 'Display Percentage', icon=icon('percent'))
     }
   })
   
@@ -196,7 +202,8 @@ shinyServer(function(input, output, session) {
       ) %>% 
       layout(title = 'Top 12 Game Genres',
              xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games'))
+             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      config(displayModeBar = FALSE)
   })
   
   output$top_categories <- renderPlotly({
@@ -222,7 +229,8 @@ shinyServer(function(input, output, session) {
       ) %>% 
       layout(title = 'Top 12 Game Categories by Year',
              xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games'))
+             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      config(displayModeBar = FALSE)
   })
   
   output$platforms_percentage <- renderPlotly({
@@ -244,7 +252,29 @@ shinyServer(function(input, output, session) {
       add_trace(y = ~perc_linux, name = 'Linux') %>% 
       layout(title = 'Operating Systems',
              xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games'))
+             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      config(displayModeBar = FALSE)
+  })
+  
+  output$ratings <- renderPlotly({
+    v$steam_games_filtered %>% 
+      group_by(release_year) %>% 
+      summarize(perc_has_metacritic= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(metacritic))/n(), as.double(sum(!is.na(metacritic)))),
+                perc_has_recommended= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(recommended))/n(), as.double(sum(!is.na(recommended))))
+      ) %>% 
+      plot_ly(
+        x = ~release_year,
+        y = ~perc_has_metacritic,
+        name ='has Metacritic Scores',
+        type = "scatter",
+        mode= 'lines'
+      ) %>% 
+      add_trace(y = ~perc_has_recommended, name = 'has Recommendations') %>%
+      layout(title = 'Games With Metacritic or User Ratings',
+             xaxis = list(title = 'Year'),
+             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      config(displayModeBar = FALSE)
+    
   })
   
   output$other_stats <- renderPlotly({
@@ -252,9 +282,7 @@ shinyServer(function(input, output, session) {
       group_by(release_year) %>% 
       summarize(perc_is_free= if_else(input$num_or_perc %% 2 == 0, 100*sum(is_free)/n(), as.double(sum(is_free))),
                 perc_has_dlc= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(dlc))/n(), as.double(sum(!is.na(dlc)))),
-                perc_has_achievements= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(achievements))/n(), as.double(sum(!is.na(achievements)))),
-                perc_has_metacritic= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(metacritic))/n(), as.double(sum(!is.na(metacritic)))),
-                perc_has_recommended= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(recommended))/n(), as.double(sum(!is.na(recommended))))
+                perc_has_achievements= if_else(input$num_or_perc %% 2 == 0, 100*sum(!is.na(achievements))/n(), as.double(sum(!is.na(achievements))))
       ) %>% 
       plot_ly(
         x = ~release_year,
@@ -265,11 +293,10 @@ shinyServer(function(input, output, session) {
       ) %>% 
       add_trace(y = ~perc_has_dlc, name = 'has DLC') %>%
       add_trace(y = ~perc_is_free, name = 'is Free') %>% 
-      add_trace(y = ~perc_has_metacritic, name = 'has Metacritic Score') %>%
-      add_trace(y = ~perc_has_recommended, name = 'has Recommendations') %>%
-      layout(title = 'Games with given attributes',
+      layout(title = 'Games With Given Attributes',
              xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games'))
+             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      config(displayModeBar = FALSE)
     
   })
   
@@ -298,7 +325,8 @@ shinyServer(function(input, output, session) {
       #add_trace(y = ~developers_per_game, name = 'Developers') %>%
       layout(title = 'Number of Trailers or Screenshots per game',
              xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Average'))
+             yaxis = list(title = 'Average')) %>% 
+      config(displayModeBar = FALSE)
   })
   
   # ============ GENRES tab
@@ -327,12 +355,13 @@ shinyServer(function(input, output, session) {
                        y = ~Yn, 
                        mode = 'markers', 
                        marker = list(size = 100* (v$vertices_filtered %>% pull(num_apps)) / (v$vertices_filtered %>% select(num_apps) %>% sum()),
-                                     opacity = 0.7),
+                                     opacity = 0.7,color='#367fa9'),
                        text = paste(unique_names, '<br>Games count:', v$vertices_filtered$num_apps),
                        texttemplate = if_else(100* (v$vertices_filtered %>% pull(num_apps)) / (v$vertices_filtered %>% select(num_apps) %>% sum()) >10, unique_names, ''),
                        hoverinfo = 'text'
     ) %>%
-      add_text(textposition= 'right')
+      add_text(textposition= 'right') %>% 
+      config(displayModeBar = FALSE)
     
     edge_shapes <- list()
     
@@ -341,7 +370,7 @@ shinyServer(function(input, output, session) {
       v1 <- es[i,]$V2
       edge_shape = list(
         type = 'line',
-        line = list(color = "#030303",
+        line = list(color = "#1b2838",
                     width = 30 * (v$relations_filtered %>% pull(num_connections))[i] / (v$relations_filtered %>% select('num_connections') %>% sum())
         ),
         x0 = Xn[v0],

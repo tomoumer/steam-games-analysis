@@ -15,13 +15,13 @@ genres_relations_df <- readRDS('data/genres_relations.rds')
 top_genres_list <- steam_games_df %>% 
   separate_rows(genres, sep = ';') %>% 
   count(genres, sort=TRUE, name='num_apps') %>% 
-  head(12) %>% 
+  head(10) %>% 
   pull(genres)
 
 top_categories_list <- steam_games_df %>% 
   separate_rows(categories, sep = ';') %>% 
   count(categories, sort=TRUE, name='num_apps') %>% 
-  head(12) %>% 
+  head(10) %>% 
   pull(categories)
 
 
