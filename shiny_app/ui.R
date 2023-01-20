@@ -26,7 +26,7 @@ shinyUI(dashboardPage(
     
     sidebarMenu(
       id='tabs',
-      menuItem('Navigation', tabName = 'navigation', icon = icon('map-location-dot'), badgeLabel = "start here", badgeColor = "blue"),
+      menuItem('Navigation', tabName = 'navigation', icon = icon('map-location-dot')),
       menuItem('Overview',tabName = 'overview', icon = icon('database')),
       menuItem('Trends',tabName = 'trends', icon = icon('money-bill-trend-up')),
       menuItem('Genres',tabName = 'genres', icon = icon('dragon')),
@@ -69,13 +69,12 @@ shinyUI(dashboardPage(
             title='Welcome to Steam Games Analysis!',
             status='primary',
             solidHeader=TRUE,
+            img(src='https://nashvillesoftwareschool.com/images/NSS-logo-horizontal-small.jpg', width = "432px", height = "36px"),
             p('A midcourse Data Science project'),
             span('by: Tomo Umer, MS', style='font-size:20px')
           )
         ),
-        #fluidRow(
-        #  tags$img(src='https://nashvillesoftwareschool.com/images/NSS-logo-horizontal-small.jpg', width = "100px", height = "20px")
-        #),
+
         fluidRow(
           tabBox(
             #title = "First tabBox",
@@ -196,19 +195,19 @@ shinyUI(dashboardPage(
                   title='Steam Games Highlights',
                   status='primary',
                   solidHeader=TRUE,
-                  p('General Overview of the Data')
+                  p('Some numbers from the dataset with currently selected filters:'),
+                  fluidRow(
+                    valueBoxOutput('num_games'),
+                    valueBoxOutput('num_publishers'),
+                    valueBoxOutput('num_developers')
+                  )
                 )
               ),
-              fluidRow(
-                valueBoxOutput('num_games'),
-                valueBoxOutput('num_publishers'),
-                valueBoxOutput('num_developers')
-              ),
-              fluidRow(
-                infoBoxOutput('perc_free'),
-                infoBoxOutput('perc_dlc'),
-                infoBoxOutput('perc_achievements')
-              ),
+              #fluidRow(
+              #  infoBoxOutput('perc_free'),
+              #  infoBoxOutput('perc_dlc'),
+              #  infoBoxOutput('perc_achievements')
+              #),
               plotlyOutput('games_by_year')
       ),
       
@@ -220,12 +219,58 @@ shinyUI(dashboardPage(
                   title='Trends Over Time',
                   status='primary',
                   solidHeader=TRUE,
-                  p('Graphs displaying trends of different variables.')
+                  p('Graphs displaying trends of different variables.'),
+                  conditionalPanel(
+                    condition = "input.tabset2 == 'Genres'",
+                    fluidRow(
+                      infoBoxOutput('n1_genre'),
+                      infoBoxOutput('n2_genre'),
+                      infoBoxOutput('n3_genre')
+                    )
+                  ),
+                  conditionalPanel(
+                    condition = "input.tabset2 == 'Categories'",
+                    fluidRow(
+                      infoBoxOutput('n1_category'),
+                      infoBoxOutput('n2_category'),
+                      infoBoxOutput('n3_category')
+                    )
+                  ),
+                  conditionalPanel(
+                    condition = "input.tabset2 == 'OS'",
+                    fluidRow(
+                      infoBoxOutput('n_win'),
+                      infoBoxOutput('n_mac'),
+                      infoBoxOutput('n_linux')
+                    )
+                  ),
+                  conditionalPanel(
+                  condition = "input.tabset2 == 'Ratings'",
+                  fluidRow(
+                    infoBoxOutput('n_metacritic'),
+                    infoBoxOutput('n_recommended')
+                  )
+                ),
+                  conditionalPanel(
+                    condition = "input.tabset2 == 'Other'",
+                  fluidRow(
+                    infoBoxOutput('n_free'),
+                    infoBoxOutput('n_dlc'),
+                    infoBoxOutput('n_achievements')
+                  )
+                  ),
+                conditionalPanel(
+                  condition = "input.tabset2 == 'Trailers and Screenshots'",
+                  fluidRow(
+                    infoBoxOutput('nr_screenshots'),
+                    infoBoxOutput('nr_trailers')
+                  )
+                )
                 )
               ),
               tabBox(
                 #title = "First tabBox",
-                id = "tabset1",
+                id = "tabset2",
                 width=12,
                 tabPanel('Genres', plotlyOutput('top_genres')),
                 tabPanel('Categories', plotlyOutput('top_categories')),

@@ -6,7 +6,9 @@ shinyServer(function(input, output, session) {
   # reactive values
   v <- reactiveValues(vertices_filtered = NULL,
                       relations_filtered = NULL,
+                      categories_filtered = NULL,
                       steam_games_filtered = NULL,
+                      os_filtered = NULL,
                       graph_colors = c('#367fa9', '#1b2838'))
   
   
@@ -22,6 +24,10 @@ shinyServer(function(input, output, session) {
         separate_rows(genres, sep = ';') %>% 
         count(genres, sort=TRUE, name='num_apps')
       
+      v$categories_filtered <- v$steam_games_filtered %>% 
+        separate_rows(categories, sep = ';') %>% 
+        count(categories, sort=TRUE, name='num_apps')
+      
       v$relations_filtered <- genres_relations_df %>% 
         filter(release_year != 'unknown' &
                  release_year != '2023' &
@@ -30,6 +36,12 @@ shinyServer(function(input, output, session) {
         group_by(from, to) %>% 
         summarize(num_connections=sum(num_connections)) %>% 
         ungroup()
+      
+      v$os_filtered <- v$steam_games_filtered %>% 
+        separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
+        summarize(count_win= sum(as.logical(win)),
+                  count_mac = sum(as.logical(mac)),
+                  count_linux =sum(as.logical(linux))) 
       
       v$graph_colors <- c('#367fa9')
       
@@ -47,6 +59,10 @@ shinyServer(function(input, output, session) {
         separate_rows(genres, sep = ';') %>% 
         count(genres, sort=TRUE, name='num_apps')
       
+      v$categories_filtered <- v$steam_games_filtered %>% 
+        separate_rows(categories, sep = ';') %>% 
+        count(categories, sort=TRUE, name='num_apps')
+      
       v$relations_filtered <- genres_relations_df %>% 
         filter(release_year == 'unknown' |
                  release_year == '2023' |
@@ -55,6 +71,12 @@ shinyServer(function(input, output, session) {
         group_by(from, to) %>% 
         summarize(num_connections=sum(num_connections)) %>% 
         ungroup()
+      
+      v$os_filtered <- v$steam_games_filtered %>% 
+        separate(windows_mac_linux, c('win', 'mac', 'linux'), sep = ';') %>% 
+        summarize(count_win= sum(as.logical(win)),
+                  count_mac = sum(as.logical(mac)),
+                  count_linux =sum(as.logical(linux))) 
       
       v$graph_colors <- c('#367fa9', '#1b2838')
       
@@ -97,39 +119,6 @@ shinyServer(function(input, output, session) {
       'Number of Developers',
       icon = icon("person-digging"),
       color = "black"
-    )
-  })
-  
-  output$perc_free <- renderValueBox({
-    valueBox(
-      paste0(format(v$steam_games_filtered %>% 
-                      summarize(100*sum(is_free)/n()) %>% 
-                      pull(), digits=3), '%'),
-      'Free games',
-      icon = icon("comments-dollar"),
-      color = "blue"
-    )
-  })
-  
-  output$perc_dlc <- renderValueBox({
-    valueBox(
-      paste0(format(v$steam_games_filtered %>% 
-                      summarize(100*sum(!is.na(dlc))/n()) %>% 
-                      pull(), digits=3), '%'),
-      'Games with dlc (downloadable content)',
-      icon = icon("download"),
-      color = "blue"
-    )
-  })
-  
-  output$perc_achievements <- renderValueBox({
-    valueBox(
-      paste0(format(v$steam_games_filtered %>% 
-                      summarize(100*sum(!is.na(achievements))/n()) %>% 
-                      pull(), digits=3), '%'),
-      'Games with achievements',
-      icon = icon("trophy"),
-      color = "blue"
     )
   })
   
@@ -176,6 +165,39 @@ shinyServer(function(input, output, session) {
     }
   })
   
+  # ==== TRENDS-genres subtab
+  output$n1_genre <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$vertices_filtered %>% slice(1) %>% pull(num_apps) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$vertices_filtered %>% slice(1) %>% pull(num_apps), big.mark = ',')),
+      paste(v$vertices_filtered %>% slice(1) %>% pull(genres), 'Games'),
+      icon = icon('1'),
+      color = "black"
+    )
+  })
+  
+  output$n2_genre <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$vertices_filtered %>% slice(2) %>% pull(num_apps) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$vertices_filtered %>% slice(2) %>% pull(num_apps), big.mark = ',')),
+      paste(v$vertices_filtered %>% slice(2) %>% pull(genres), 'Games'),
+      icon = icon('2'),
+      color = "black"
+    )
+  })
+  
+  output$n3_genre <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$vertices_filtered %>% slice(3) %>% pull(num_apps) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$vertices_filtered %>% slice(3) %>% pull(num_apps), big.mark = ',')),
+      paste(v$vertices_filtered %>% slice(3) %>% pull(genres), 'Games'),
+      icon = icon('3'),
+      color = "black"
+    )
+  })
   
   output$top_genres <- renderPlotly({
     v$steam_games_filtered %>% 
@@ -200,10 +222,44 @@ shinyServer(function(input, output, session) {
         type = 'scatter',
         mode= 'lines'
       ) %>% 
-      layout(title = 'Top 12 Game Genres',
+      layout(title = 'Top 10 Game Genres by Year',
              xaxis = list(title = 'Year'),
              yaxis = list(title = 'Percentage of Video Games')) %>% 
       config(displayModeBar = FALSE)
+  })
+  
+  # ==== TRENDS-categories subtab
+  output$n1_category <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$categories_filtered %>% slice(1) %>% pull(num_apps) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$categories_filtered %>% slice(1) %>% pull(num_apps), big.mark = ',')),
+      paste(v$categories_filtered %>% slice(1) %>% pull(categories), 'Games'),
+      icon = icon('1'),
+      color = "black"
+    )
+  })
+  
+  output$n2_category <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$categories_filtered %>% slice(2) %>% pull(num_apps) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$categories_filtered %>% slice(2) %>% pull(num_apps), big.mark = ',')),
+      paste(v$categories_filtered %>% slice(2) %>% pull(categories), 'Games'),
+      icon = icon('2'),
+      color = "black"
+    )
+  })
+  
+  output$n3_category <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$categories_filtered %>% slice(3) %>% pull(num_apps) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$categories_filtered %>% slice(3) %>% pull(num_apps), big.mark = ',')),
+      paste(v$categories_filtered %>% slice(3) %>% pull(categories), 'Games'),
+      icon = icon('3'),
+      color = "black"
+    )
   })
   
   output$top_categories <- renderPlotly({
@@ -227,10 +283,45 @@ shinyServer(function(input, output, session) {
         type = 'scatter',
         mode= 'lines'
       ) %>% 
-      layout(title = 'Top 12 Game Categories by Year',
+      layout(title = 'Top 10 Game Categories by Year',
              xaxis = list(title = 'Year'),
              yaxis = list(title = 'Percentage of Video Games')) %>% 
       config(displayModeBar = FALSE)
+  })
+  
+  
+  # ==== TRENDS-platforms subtab
+  output$n_win <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$os_filtered %>% pull(count_win) / v$steam_games_filtered %>% count() %>% pull(), digits=4), '%'),
+              format(v$os_filtered %>% pull(count_win), big.mark = ',')),
+      'Windows Games',
+      icon = icon('windows'),
+      color = "black"
+    )
+  })
+  
+  output$n_mac <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$os_filtered %>% pull(count_mac) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$os_filtered %>% pull(count_mac), big.mark = ',')),
+      'MacOS Games',
+      icon = icon('apple'),
+      color = "black"
+    )
+  })
+  
+  output$n_linux <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$os_filtered %>% pull(count_linux) / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$os_filtered %>% pull(count_linux), big.mark = ',')),
+      'Linux Games',
+      icon = icon('linux'),
+      color = "black"
+    )
   })
   
   output$platforms_percentage <- renderPlotly({
@@ -256,6 +347,29 @@ shinyServer(function(input, output, session) {
       config(displayModeBar = FALSE)
   })
   
+  # ==== TRENDS-ratings subtab
+  output$n_metacritic <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$steam_games_filtered %>% summarize(sum(!is.na(metacritic))) %>% pull() / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$steam_games_filtered %>% summarize(sum(!is.na(metacritic))) %>% pull() , big.mark = ',')),
+      'Has Metacritic Score',
+      icon = icon('comments'),
+      color = "black"
+    )
+  })
+  
+  output$n_recommended <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$steam_games_filtered %>% summarize(sum(!is.na(recommended))) %>% pull() / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$steam_games_filtered %>% summarize(sum(!is.na(recommended))) %>% pull() , big.mark = ',')),
+      'People Recommended It',
+      icon = icon('thumbs-up'),
+      color = "black"
+    )
+  })
+  
   output$ratings <- renderPlotly({
     v$steam_games_filtered %>% 
       group_by(release_year) %>% 
@@ -276,6 +390,41 @@ shinyServer(function(input, output, session) {
       config(displayModeBar = FALSE)
     
   })
+  
+  # ==== TRENDS-other_stats subtab
+  output$n_free <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$steam_games_filtered %>% summarize(sum(is_free)) %>% pull() / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$steam_games_filtered %>% summarize(sum(is_free)) %>% pull() , big.mark = ',')),
+      'Free Games',
+      icon = icon("comments-dollar"),
+      color = "black"
+    )
+  })
+  
+  output$n_dlc <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$steam_games_filtered %>% summarize(sum(!is.na(dlc))) %>% pull() / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$steam_games_filtered %>% summarize(sum(!is.na(dlc))) %>% pull() , big.mark = ',')),
+      'Games with DLC (downloadable content)',
+      icon = icon("download"),
+      color = "black"
+    )
+  })
+  
+  output$n_achievements <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              paste0(format(100* v$steam_games_filtered %>% summarize(sum(!is.na(achievements))) %>% pull() / v$steam_games_filtered %>% count() %>% pull(), digits=3), '%'),
+              format(v$steam_games_filtered %>% summarize(sum(!is.na(achievements))) %>% pull() , big.mark = ',')),
+      'Games with Achievements',
+      icon = icon("trophy"),
+      color = "black"
+    )
+  })
+  
   
   output$other_stats <- renderPlotly({
     v$steam_games_filtered %>% 
@@ -300,12 +449,39 @@ shinyServer(function(input, output, session) {
     
   })
   
+  # ==== TRENDS-screenshots & trailers subtab
+  output$nr_screenshots <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              format(v$steam_games_filtered %>% summarize(sum(n_screenshots)) %>% pull() / v$steam_games_filtered %>% count() %>% pull(), digits=3),
+              format(v$steam_games_filtered %>% summarize(sum(n_screenshots)) %>% pull() , big.mark = ',')),
+      if_else(input$num_or_perc %% 2 == 0,
+              'Screenshots Per Game',
+              'Screenshots'),
+      icon = icon("file-image"),
+      color = "black"
+    )
+  })
+  
+  output$nr_trailers <- renderValueBox({
+    valueBox(
+      if_else(input$num_or_perc %% 2 == 0,
+              format(v$steam_games_filtered %>% summarize(sum(n_trailers)) %>% pull() / v$steam_games_filtered %>% count() %>% pull(), digits=3),
+              format(v$steam_games_filtered %>% summarize(sum(n_trailers)) %>% pull() , big.mark = ',')),
+      if_else(input$num_or_perc %% 2 == 0,
+              'Trailers Per Game',
+              'Trailers'),
+      icon = icon("file-video"),
+      color = "black"
+    )
+  })
+  
   output$screenhots_trailers <- renderPlotly({
     v$steam_games_filtered %>% 
-      mutate(n_publishers = str_count(publishers, ';') + 1,
-             n_developers = str_count(developers, ';') + 1) %>% 
-      mutate(n_publishers = replace_na(n_publishers, 0),
-             n_developers = replace_na(n_developers, 0)) %>% 
+      #mutate(n_publishers = str_count(publishers, ';') + 1,
+      #       n_developers = str_count(developers, ';') + 1) %>% 
+      #mutate(n_publishers = replace_na(n_publishers, 0),
+      #       n_developers = replace_na(n_developers, 0)) %>% 
       group_by(release_year) %>% 
       summarize(secreenshots_per_game= if_else(input$num_or_perc %% 2 == 0, sum(n_screenshots)/n(), as.double(sum(n_screenshots))),
                 trailers_per_game= if_else(input$num_or_perc %% 2 == 0, sum(n_trailers)/n(), as.double(sum(n_trailers)))#,
@@ -325,7 +501,7 @@ shinyServer(function(input, output, session) {
       #add_trace(y = ~developers_per_game, name = 'Developers') %>%
       layout(title = 'Number of Trailers or Screenshots per game',
              xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Average')) %>% 
+             yaxis = list(title = 'Average per Game')) %>% 
       config(displayModeBar = FALSE)
   })
   
