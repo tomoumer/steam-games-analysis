@@ -614,11 +614,13 @@ shinyServer(function(input, output, session) {
       ungroup() %>% 
       arrange(desc(total_connections)) %>% 
       left_join(v$vertices_filtered,
-                by=c('from'='genres')) %>% 
+                by=c('from'='genres'),
+                suffix=c('_from', '_to')) %>% 
       left_join(v$vertices_filtered,
-                by=c('to'='genres')) %>% 
-      mutate(possible_connections= paste0(format(100*total_connections / pmin(num_apps.x, num_apps.y), digits=1), '%')) %>% 
-      select('Genre 1'=from, 'Genre 2'=to, 'Relations'=total_connections, '% of Possible Relations'=possible_connections)
+                by=c('to'='genres'),
+                suffix=c('_from', '_to')) %>% 
+      mutate(possible_connections= paste0(format(100*total_connections / pmin(num_apps_from, num_apps_to), digits=1), '%')) %>% 
+      select('Genre 1 Name'=from, 'Genre 2 Name'=to, 'Genre 1 Count'=num_apps_from, 'Genre 2 Count'=num_apps_to, 'Relations Count'=total_connections, '% of Possible Relations'=possible_connections)
   },  options = list(pageLength = 10))
   
   

@@ -89,9 +89,9 @@ shinyUI(dashboardPage(
             title='Welcome to Steam Games Analysis!',
             status='primary',
             solidHeader=TRUE,
-            img(src='https://nashvillesoftwareschool.com/images/NSS-logo-horizontal-small.jpg', width = '100%', height = 'Auto'),
-            span('A midcourse Data Science project', br(),
-            'by: Tomo Umer, MS', style='font-size:20px')
+            img(src='https://nashvillesoftwareschool.com/images/NSS-logo-horizontal-small.jpg', width = '50%', height = 'Auto'),
+            br(),
+            span('A midcourse Data Science project by', strong('Tomo Umer, MS'), style='font-size:20px')
           )
         ),
 
@@ -101,21 +101,22 @@ shinyUI(dashboardPage(
             id = "tabset1",
             width=12,
             tabPanel('Navigation Info',
-                     p('A couple of', strong('important'), 'navigation notes:'),
+                     p('A couple of navigation notes:'),
                      p(strong('Header'), '(top of the page)'),
                      tags$ul(
-                       tags$li('Menu (', icon('bars'), ') to show/hide sidebar')
+                       tags$li('Menu (', icon('bars'), ') to show/hide sidebar'),
+                       tags$li('Links to Steam webpage (', icon('steam'), ') and my Github (', icon('github'), ')')
                      ),
                      p(strong('Sidebar'), '(left side)'),
                      tags$ul(
                        tags$li('Explore app by clicking on tabs (', icon('map-location-dot'), icon('database'),
                                icon('money-bill-trend-up'), icon('dragon'), icon('dice-d20'), ')'),
-                       tags$li('Change the filters - they only appear while relevant tabs are selected')
+                       tags$li('Change the filters - only appear when relevant')
                      ),
                      p(strong('Main Body'), '(you are reading it)'),
                      tags$ul(
-                       tags$li('This page and Trends page have additional tabs within'),
-                       tags$li('Graphs are interactive - zoom in/out, or show/hide various traces')
+                       tags$li('The Navigation tab and Trends tab have additional tabs within'),
+                       tags$li('Graphs are interactive - zoom in/out, or show/hide various traces by clicking on the legend')
                      )
                      
             ),
@@ -124,25 +125,25 @@ shinyUI(dashboardPage(
                                      "we grow old because we stop playing.",
                                      br(),
                                      tags$cite('- George Bernard Shaw')),
-                     p('Reasons for choosing video games for my project:'),
+                     strong('Why video games for my project?'),
                      tags$ul(
                        tags$li('They are fun, educational, and an art form'),
                        tags$li('Games mimic real life and we can learn a lot from them')
                      ),
-                     p('Why Steam?'),
+                     strong('Why Steam?'),
                      tags$ul(
                        tags$li('Developed by Valve as a digital software distribution platform for PC gaming with great Linux support'),
                        tags$li('Only real competition Epic Games Store since end of 2018')
                      ),
-                     p('Initial plan:'),
+                     strong('Initial plan:'),
                      tags$ul(
                        tags$li('Analyze popularity of games on Steam over time (Half-Life of games on Steam)'),
                        tags$li("With Michael Holloway's help got a Python scraping program done for a site that has that data"),
                        tags$li("... unfortunatelly too slow and no good way to select a good subset")
                      ),
-                     p('Change of plan:'),
+                     strong('Change of plan:'),
                      tags$ul(
-                       tags$li('Using', a(href='https://steamcommunity.com/dev', 'Steam API'), '(no support from Steam)'),
+                       tags$li('Using', a(href='https://steamcommunity.com/dev', 'Steam API'), '(no official support from Valve)'),
                        tags$li('With R, some fixes due to API mistakes, about ~50 hrs later, got 152,194 apps (',
                                a(href='https://www.urbandictionary.com/define.php?term=ggez', 'GG EZ') ,')'),
                        tags$li('Data collection: 12/23/2022 to 12/26/2022')
@@ -151,14 +152,14 @@ shinyUI(dashboardPage(
             tabPanel('Expectations and Findings',
                      p("Just like with the video streaming, Valve isn't the only digital game distribution service anymore."),
                      p('Between the App Store, Google Play, Epic Games, Xbox, PlayStation and Nintendo stores, the space is getting quite saturated.'),
-                     p('My predictions (before analysis):'),
+                     p(strong('My predictions'), '(before analysis):'),
                      tags$ul(
                        tags$li('Prevalence of Indie (independent developer)'),
                        tags$li('An increase in Multi Player games in recent years'),
                        tags$li('Over the years, more games on Linux and MacOS'),
                        tags$li('Effect of COVID-19 (less games)')
                      ),
-                     p('Reality (after analysis):'),
+                     p(strong('Reality'), '(after analysis):'),
                      tags$ul(
                        tags$li('The steam games are by and large "Indie" genre, even more so than I thought'),
                        tags$li('Single Player games continue to be on the top of the category list'),
@@ -184,11 +185,11 @@ shinyUI(dashboardPage(
                      )
             ),
             tabPanel('Gamification',
-                     p('Term that refers to turnig real world problems into games to solve.'),
+                     p('Term that refers to turnig real world problems into games to find creative solutions.'),
                      p('Some examples of practical application of games:'),
                      tags$ul(
                        tags$li(a(href='https://en.wikipedia.org/wiki/List_of_Doom_ports', 'Porting of Doom to Windows'),
-                               'in 1996 is what fused productivity and fun and helped Microsoft dominate the market.'),
+                               'in 1996 is what fused productivity and fun and helped Microsoft dominate the market'),
                        tags$li('Thanks to a bug in World Of Warcraft in 2005,', a(href='https://www.washingtonpost.com/video-games/2020/04/09/world-warcraft-experienced-pandemic-2005-that-experience-may-help-coronavirus-researchers/',
                                                                                   'researches studied spread of viruses (yep, including COVID-19)')),
                        tags$li(a(href='https://sites.google.com/view/vanderbilt-accre-analysis/home', 'ACCRE GPU cluster (analysis by me, Monica Weiss-Sharp and Hayden Greer)'),
@@ -317,7 +318,7 @@ shinyUI(dashboardPage(
               tabPanel('Relations Network Graph', plotlyOutput('genres_network')),
               tabPanel('Relations Table',
                   p('The percentage measures how many relations two genres have out of theoretically possible ones.'),
-                  p('It is evaluated by taking the total number of relations and dividing by the lesser of the two pairs it is connecting.'),
+                  p('It is evaluated by taking the total number of relations (Relations Count) and dividing by the lesser of the two pairs it is connecting (either Genre 1 Count or Genre 2 Count).'),
                   DT::dataTableOutput('connections_table')
                 )
               )

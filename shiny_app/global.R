@@ -37,7 +37,13 @@ random_phrases <- c('That was fun, give me another five!',
                     'Rise and shine, Mr. Freeman',
                     'MOOOOOOREEEEE!!',
                     'Do not click this button!',
-                    'PRAISE THE DOG!')
+                    'PRAISE THE DOG!',
+                    'Verba volant, scripta manent',
+                    'Ez Game, Ez Life',
+                    'GIT GUD',
+                    'For science!',
+                    'I Took an Arrow in the Knee')
 
 random_icons <- c('dice','dice-one', 'pizza-slice', 'location-dot', 'music', 'poo', 'dice-six',
-                  'dice-d6', 'shuffle', 'circle-question', 'cake-candles', 'book')
+                  'dice-d6', 'shuffle', 'circle-question', 'cake-candles', 'book', 'steam', 'github',
+                  'dungeon', 'glasses', 'person-walking-arrow-right')
