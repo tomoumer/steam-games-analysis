@@ -3,6 +3,7 @@ library(shinydashboard)
 library(tidyverse)
 library(plotly)
 library(igraph)
+library(DT)
 
 steam_games_df <- readRDS('data/filtered_games_list.rds') %>% 
   mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 

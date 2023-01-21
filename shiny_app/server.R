@@ -22,6 +22,7 @@ shinyServer(function(input, output, session) {
       
       v$vertices_filtered <- v$steam_games_filtered %>% 
         separate_rows(genres, sep = ';') %>% 
+        drop_na(genres) %>% 
         count(genres, sort=TRUE, name='num_apps')
       
       v$categories_filtered <- v$steam_games_filtered %>% 
@@ -57,6 +58,7 @@ shinyServer(function(input, output, session) {
       
       v$vertices_filtered <- v$steam_games_filtered %>% 
         separate_rows(genres, sep = ';') %>% 
+        drop_na(genres) %>% 
         count(genres, sort=TRUE, name='num_apps')
       
       v$categories_filtered <- v$steam_games_filtered %>% 
@@ -99,10 +101,10 @@ shinyServer(function(input, output, session) {
   output$num_publishers <- renderValueBox({
     valueBox(
       format(v$steam_games_filtered %>% 
-        separate_rows(publishers, sep = ';') %>% 
-        summarize(n_distinct(publishers, na.rm=TRUE)) %>% 
-        pull(),
-        big.mark   = ','),
+               separate_rows(publishers, sep = ';') %>% 
+               summarize(n_distinct(publishers, na.rm=TRUE)) %>% 
+               pull(),
+             big.mark   = ','),
       'Number of Publishers',
       icon = icon("person-dots-from-line"),
       color = "black"
@@ -112,10 +114,10 @@ shinyServer(function(input, output, session) {
   output$num_developers <- renderValueBox({
     valueBox(
       format(v$steam_games_filtered %>% 
-        separate_rows(developers, sep = ';') %>% 
-        summarize(n_distinct(developers, na.rm=TRUE)) %>% 
-        pull(),
-        big.mark   = ','),
+               separate_rows(developers, sep = ';') %>% 
+               summarize(n_distinct(developers, na.rm=TRUE)) %>% 
+               pull(),
+             big.mark   = ','),
       'Number of Developers',
       icon = icon("person-digging"),
       color = "black"
@@ -513,7 +515,42 @@ shinyServer(function(input, output, session) {
     g <- graph_from_data_frame(v$relations_filtered, directed=FALSE, vertices=v$vertices_filtered )
     
     G <- upgrade_graph(g)
-    L <- layout_nicely(G)
+    
+    if (input$select_graph == '1') {
+      L <- layout_as_star(G)
+    } else if (input$select_graph == '2') {
+      L <- layout_as_tree(G)
+    } else if (input$select_graph == '3') {
+      L <- layout_in_circle(G)
+    } else if (input$select_graph == '4') {
+      L <- layout_nicely(G)
+    } else if (input$select_graph == '5') {
+      L <- layout_on_grid(G)
+    } else if (input$select_graph == '6') {
+      L <- layout_on_sphere(G)
+    } else if (input$select_graph == '7') {
+      L <- layout_randomly(G)
+    } else if (input$select_graph == '8') {
+      L <- layout_with_dh(G)
+    }
+    else if (input$select_graph == '9') {
+      L <- layout_with_fr(G)
+    }
+    else if (input$select_graph == '10') {
+      L <- layout_with_gem(G)
+    }
+    else if (input$select_graph == '11') {
+      L <- layout_with_graphopt(G)
+    }
+    else if (input$select_graph == '12') {
+      L <- layout_with_kk(G)
+    }
+    else if (input$select_graph == '13') {
+      L <- layout_with_lgl(G)
+    }
+    else if (input$select_graph == '14') {
+      L <- layout_with_mds(G)
+    }
     
     vs <- V(G)
     es <- as.data.frame(get.edgelist(G))
@@ -570,6 +607,21 @@ shinyServer(function(input, output, session) {
     fig
   })
   
+  output$connections_table <- DT::renderDataTable({
+    v$relations_filtered %>% 
+      group_by(from, to) %>% 
+      summarize(total_connections=sum(num_connections)) %>% 
+      ungroup() %>% 
+      arrange(desc(total_connections)) %>% 
+      left_join(v$vertices_filtered,
+                by=c('from'='genres')) %>% 
+      left_join(v$vertices_filtered,
+                by=c('to'='genres')) %>% 
+      mutate(possible_connections= paste0(format(100*total_connections / pmin(num_apps.x, num_apps.y), digits=1), '%')) %>% 
+      select('Genre 1'=from, 'Genre 2'=to, 'Relations'=total_connections, '% of Possible Relations'=possible_connections)
+  },  options = list(pageLength = 10))
+  
+  
   # ============= FUN STUFF tab
   observeEvent(input$random_five, {
     updateActionButton(session, 'random_five', label = sample(random_phrases, 1), icon= icon(sample(random_icons, 1)))
@@ -588,10 +640,9 @@ shinyServer(function(input, output, session) {
   })
   
   # table showing games
-  output$games_list <- renderDataTable({
+  output$games_list <- DT::renderDataTable({
     steam_games_df %>% 
       select(ID, 'Game Name' = name_app, 'Release Date' = release_date)
-  },     options = list(
-    pageLength = 10))
+  },  options = list(pageLength = 10))
   
 })

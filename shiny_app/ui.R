@@ -46,6 +46,25 @@ shinyUI(dashboardPage(
         conditionalPanel(
           condition = "input.tabs == 'trends'",
           actionButton('num_or_perc', label = 'Display Total Values', icon=icon('calculator'))
+        ),
+        conditionalPanel(
+          condition = "input.tabs == 'genres'",
+          selectInput('select_graph', label = 'Network Graph Layout', 
+                      choices = list('Star' = 1,
+                                     'Tree' = 2,
+                                     'Circle' = 3,
+                                     'Nicely' = 4,
+                                     'Grid' = 5,
+                                     'Sphere' = 6,
+                                     'Random' = 7,
+                                     'Davidson-Harel' = 8,
+                                     'Fruchterman-Reingold' = 9,
+                                     'GEM algorithm' = 10,
+                                     'Graphopt' = 11,
+                                     'Kamada-Kawai' = 12,
+                                     'Large Graph' = 13,
+                                     'Multidimensional' = 14), 
+                      selected = 4),
         )
         
       )
@@ -203,11 +222,6 @@ shinyUI(dashboardPage(
                   )
                 )
               ),
-              #fluidRow(
-              #  infoBoxOutput('perc_free'),
-              #  infoBoxOutput('perc_dlc'),
-              #  infoBoxOutput('perc_achievements')
-              #),
               plotlyOutput('games_by_year')
       ),
       
@@ -268,8 +282,8 @@ shinyUI(dashboardPage(
                 )
                 )
               ),
+              fluidRow(
               tabBox(
-                #title = "First tabBox",
                 id = "tabset2",
                 width=12,
                 tabPanel('Genres', plotlyOutput('top_genres')),
@@ -278,6 +292,7 @@ shinyUI(dashboardPage(
                 tabPanel('Ratings', plotlyOutput('ratings')),
                 tabPanel('Other', plotlyOutput('other_stats')),
                 tabPanel('Trailers and Screenshots', plotlyOutput('screenhots_trailers'))
+              )
               )
               
               
@@ -289,14 +304,24 @@ shinyUI(dashboardPage(
               fluidRow(
                 box(
                   width=12,
-                  title='Video Game Genres',
+                  title='Video Game Genres Relations',
                   status='primary',
                   solidHeader=TRUE,
-                  p('Network graph of connections between genres.')
+                  p('Showcasing how frequently the genres are paired together.')
                 )
               ),
-              
-              plotlyOutput('genres_network')
+              fluidRow(
+              tabBox(
+                id = "tabset3",
+                width=12,
+              tabPanel('Relations Network Graph', plotlyOutput('genres_network')),
+              tabPanel('Relations Table',
+                  p('The percentage measures how many relations two genres have out of theoretically possible ones.'),
+                  p('It is evaluated by taking the total number of relations and dividing by the lesser of the two pairs it is connecting.'),
+                  DT::dataTableOutput('connections_table')
+                )
+              )
+              )
       ),
       
       # ====== fun stuff tab ======
@@ -307,21 +332,30 @@ shinyUI(dashboardPage(
                   title='Fun Release Dates',
                   status='primary',
                   solidHeader=TRUE,
-                  p('In the dataset there are 8,932 games with no explicit year of release. I removed the "wishlisht" ones and chose all distinct ones.')
+                  p('In the dataset there are 8,932 games with no explicit year of release. I removed the "wishlisht" ones and chose all distinct ones.'),
+                  p('Try seeing 5 of the random release dates by clicking the button below.')
                 )
               ),
-              p('Try it out, by clicking the button below:'),
               box(
+                id='random_box',
                 width= 12,
-                background = 'light-blue',
-                #align='center',
+                background = 'black',
                 span(tableOutput('fun_times'), style='color:white'), 
                 p(''),
                 actionButton('random_five', label = 'Show me five random games!', icon= icon('dice')),
+                p(''),
+                span(em('TIP: if interested in which game(s) the release date corresponds to, search the table below'), style='color:white')
               ),
-              p('TIP: if interested in which game(s) the release date corresponds to, search the table below'),
-              h2('Steam Games Table'),
-              dataTableOutput('games_list')
+              fluidRow(
+              box(
+                width=12,
+                title='Steam Games Table',
+                status='primary',
+                solidHeader=TRUE,
+                DT::dataTableOutput('games_list')
+              )
+              )
+              
       )
       
     ))

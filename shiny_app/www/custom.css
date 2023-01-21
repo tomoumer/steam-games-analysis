@@ -66,7 +66,7 @@
 section.sidebar .shiny-input-container {
   padding: 12px 15px 12px 15px;
   white-space: normal;
-  border-top: 1px solid #fff;
+  /*border-top: 1px solid #fff;*/
 }
 
 .small-box {
@@ -96,4 +96,22 @@ section.sidebar .shiny-input-container {
 .irs--shiny .irs-from,
 .irs--shiny .irs-to {
   background-color: #367fa9;
+}
+
+.selectize-input.full,
+.selectize-control.single .selectize-input.input-active {
+  background-color: #1b2838;
+  background: #1b2838;
+  color: #fff;
+}
+
+.selectize-dropdown {
+  background-color: #1b2838;
+  background: #1b2838;
+  color: #fff;
+  border-color: #fff;
+}
+
+.box.box-solid #random_box {
+  background-color: #1b2838;
 }
