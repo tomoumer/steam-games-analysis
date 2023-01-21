@@ -51,7 +51,7 @@ shinyUI(dashboardPage(
           condition = "input.tabs == 'genres'",
           selectInput('select_graph', label = 'Network Graph Layout', 
                       choices = list('Star' = 1,
-                                     'Tree' = 2,
+                                     #'Tree' = 2,
                                      'Circle' = 3,
                                      'Nicely' = 4,
                                      'Grid' = 5,
@@ -62,8 +62,9 @@ shinyUI(dashboardPage(
                                      'GEM algorithm' = 10,
                                      'Graphopt' = 11,
                                      'Kamada-Kawai' = 12,
-                                     'Large Graph' = 13,
-                                     'Multidimensional' = 14), 
+                                     'Large Graph' = 13
+                                     #,'Multidimensional' = 14
+                                     ), 
                       selected = 4),
         )
         
@@ -88,9 +89,9 @@ shinyUI(dashboardPage(
             title='Welcome to Steam Games Analysis!',
             status='primary',
             solidHeader=TRUE,
-            img(src='https://nashvillesoftwareschool.com/images/NSS-logo-horizontal-small.jpg', width = "432px", height = "36px"),
-            p('A midcourse Data Science project'),
-            span('by: Tomo Umer, MS', style='font-size:20px')
+            img(src='https://nashvillesoftwareschool.com/images/NSS-logo-horizontal-small.jpg', width = '100%', height = 'Auto'),
+            span('A midcourse Data Science project', br(),
+            'by: Tomo Umer, MS', style='font-size:20px')
           )
         ),
 
@@ -103,7 +104,7 @@ shinyUI(dashboardPage(
                      p('A couple of', strong('important'), 'navigation notes:'),
                      p(strong('Header'), '(top of the page)'),
                      tags$ul(
-                       tags$li('Menu (', icon('bars'), ') to show/hide sidebar.')
+                       tags$li('Menu (', icon('bars'), ') to show/hide sidebar')
                      ),
                      p(strong('Sidebar'), '(left side)'),
                      tags$ul(
@@ -125,12 +126,12 @@ shinyUI(dashboardPage(
                                      tags$cite('- George Bernard Shaw')),
                      p('Reasons for choosing video games for my project:'),
                      tags$ul(
-                       tags$li('They are fun, educational and an art form'),
+                       tags$li('They are fun, educational, and an art form'),
                        tags$li('Games mimic real life and we can learn a lot from them')
                      ),
-                     p('Why Steam in particular?'),
+                     p('Why Steam?'),
                      tags$ul(
-                       tags$li('Developed by Valve for PC gaming with great Linux support'),
+                       tags$li('Developed by Valve as a digital software distribution platform for PC gaming with great Linux support'),
                        tags$li('Only real competition Epic Games Store since end of 2018')
                      ),
                      p('Initial plan:'),
@@ -139,7 +140,7 @@ shinyUI(dashboardPage(
                        tags$li("With Michael Holloway's help got a Python scraping program done for a site that has that data"),
                        tags$li("... unfortunatelly too slow and no good way to select a good subset")
                      ),
-                     p('Alright, time to pivot:'),
+                     p('Change of plan:'),
                      tags$ul(
                        tags$li('Using', a(href='https://steamcommunity.com/dev', 'Steam API'), '(no support from Steam)'),
                        tags$li('With R, some fixes due to API mistakes, about ~50 hrs later, got 152,194 apps (',
@@ -148,26 +149,25 @@ shinyUI(dashboardPage(
                      )
             ),
             tabPanel('Expectations and Findings',
-                     p("Just like with the streaming services, Valve isn't the only game distribution service anymore."),
-                     p('Between the App Store, Google Play, Epic Games, Xbox, PlayStation and Nintendo stores, as well as
-                       Epic Games, the space is getting quite saturated.'),
-                     p('My predictions:'),
+                     p("Just like with the video streaming, Valve isn't the only digital game distribution service anymore."),
+                     p('Between the App Store, Google Play, Epic Games, Xbox, PlayStation and Nintendo stores, the space is getting quite saturated.'),
+                     p('My predictions (before analysis):'),
                      tags$ul(
                        tags$li('Prevalence of Indie (independent developer)'),
                        tags$li('An increase in Multi Player games in recent years'),
                        tags$li('Over the years, more games on Linux and MacOS'),
                        tags$li('Effect of COVID-19 (less games)')
                      ),
-                     p('Reality:'),
+                     p('Reality (after analysis):'),
                      tags$ul(
-                       tags$li('The steam games are dominated by "Indie" genre, even more so than I thought'),
-                       tags$li('Single Player games dominate the category list'),
+                       tags$li('The steam games are by and large "Indie" genre, even more so than I thought'),
+                       tags$li('Single Player games continue to be on the top of the category list'),
                        tags$li('Complete domination of Windows'),
-                       tags$li("most variables can't keep up with the increasing number of games, or, they level off")
+                       tags$li("Most variables can't keep up with the increasing number of games, or, they reach a plateau")
                      )
             ),
             tabPanel('Valve pls',
-                     img(src='https://i.redd.it/xeb73opjepw91.png', width='429px', height='339px'),
+                     img(src='https://i.redd.it/xeb73opjepw91.png', width='80%', height='auto'),
                      p(a(href = 'https://www.youtube.com/watch?v=GNVAmbB8hEo', 'G-Fat, or G-Money', icon('youtube'), title = 'Cave Johnson announcer sketch') ,
                        'aka GabeN, aka Gabe Logan Newell, co-funder and president of Valve.'),
                      p('A company that is like', a(href='https://developer.valvesoftware.com/wiki/Valve_Time', '80% memes and 20% products', title='Valve Time'), '.'),
@@ -175,8 +175,8 @@ shinyUI(dashboardPage(
                      tags$ul(
                        tags$li('Half-Life (1998) - unique storytelling in video games'),
                        tags$li('Counter-Strike (2000) - eSports'),
-                       tags$li('Steam (2003) predated all (most?) other app stores'),
-                       tags$li('Dota 2 (2010-ongoing) - The International 10 (2021) prize pool $40,018,195'),
+                       tags$li('Steam (2003) - predated all (most?) other app stores'),
+                       tags$li('Dota 2 (2010-ongoing) - TI10 prize pool $40,018,195'),
                        tags$li('SteamOS (2013) - Linux based OS'),
                        tags$li('Source 2 (2014) - video game engine'),
                        tags$li('Steam Controller (2015), Valve Index (2019), Steam Deck (2022) - hardware'),
@@ -191,14 +191,14 @@ shinyUI(dashboardPage(
                                'in 1996 is what fused productivity and fun and helped Microsoft dominate the market.'),
                        tags$li('Thanks to a bug in World Of Warcraft in 2005,', a(href='https://www.washingtonpost.com/video-games/2020/04/09/world-warcraft-experienced-pandemic-2005-that-experience-may-help-coronavirus-researchers/',
                                                                                   'researches studied spread of viruses (yep, including COVID-19)')),
-                       tags$li(a(href='https://sites.google.com/view/vanderbilt-accre-analysis/home', 'ACCRE GPU cluster'),
-                               '(and others) are possible due to gaming driving down GPU prices'),
+                       tags$li(a(href='https://sites.google.com/view/vanderbilt-accre-analysis/home', 'ACCRE GPU cluster (analysis by me, Monica Weiss-Sharp and Hayden Greer)'),
+                               'is possible due to gaming driving down GPU prices'),
                        tags$li('OpenAI that developed the', a(href='https://openai.com/blog/chatgpt/', 'impressive DALL-E and chatGPT'),
                                'was first trained and perfected by competing against people in', a(href='https://openai.com/five/', 'Dota 2 (Valve game)')),
                        tags$li('Researchers use help from gamers via', a(href='https://fold.it', 'foldit'), 'who are finding innovative ways
                                to fold proteins and help speed up research'),
                        tags$li('Games and simulations used to train both people and AI - there are plenty of examples,
-                               and it it easy to imagine  byjust looking at tech demos for', a(href='https://www.unrealengine.com/en-US', 'Unreal Engine 5'))
+                               and it it easy to imagine by just looking at tech demos for', a(href='https://www.unrealengine.com/en-US', 'Unreal Engine 5'))
                      )
             )
           )

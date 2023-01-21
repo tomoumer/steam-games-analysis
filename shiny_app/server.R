@@ -142,8 +142,8 @@ shinyServer(function(input, output, session) {
         color = ~release_type,
         colors = v$graph_colors
       ) %>% 
-      layout(title = 'Video Game Releases over Years',
-             xaxis = list(title = 'Year'),
+      layout(title = 'Video Game Releases by Year',
+             xaxis = list(title = 'Release Year'),
              yaxis = list(title = 'Number of Video Games'),
              legend = list(x = 0.1, y = 0.9)
       ) %>% 
@@ -225,8 +225,8 @@ shinyServer(function(input, output, session) {
         mode= 'lines'
       ) %>% 
       layout(title = 'Top 10 Game Genres by Year',
-             xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games')) %>% 
+             xaxis = list(title = 'Release Year'),
+             yaxis = list(title = if_else(input$num_or_perc %% 2 == 0,'Percentage of Video Games', 'Number of Video Games'))) %>% 
       config(displayModeBar = FALSE)
   })
   
@@ -286,8 +286,8 @@ shinyServer(function(input, output, session) {
         mode= 'lines'
       ) %>% 
       layout(title = 'Top 10 Game Categories by Year',
-             xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games')) %>% 
+             xaxis = list(title = 'Release Year'),
+             yaxis = list(title = if_else(input$num_or_perc %% 2 == 0,'Percentage of Video Games', 'Number of Video Games'))) %>% 
       config(displayModeBar = FALSE)
   })
   
@@ -343,9 +343,9 @@ shinyServer(function(input, output, session) {
       ) %>%
       add_trace(y = ~perc_mac, name = 'Mac OS') %>% 
       add_trace(y = ~perc_linux, name = 'Linux') %>% 
-      layout(title = 'Operating Systems',
-             xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      layout(title = 'Operating Systems by Year',
+             xaxis = list(title = 'Release Year'),
+             yaxis = list(title = if_else(input$num_or_perc %% 2 == 0,'Percentage of Video Games', 'Number of Video Games'))) %>% 
       config(displayModeBar = FALSE)
   })
   
@@ -386,9 +386,9 @@ shinyServer(function(input, output, session) {
         mode= 'lines'
       ) %>% 
       add_trace(y = ~perc_has_recommended, name = 'has Recommendations') %>%
-      layout(title = 'Games With Metacritic or User Ratings',
-             xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      layout(title = 'Games with Metacritic or User Ratings by Year',
+             xaxis = list(title = 'Release Year'),
+             yaxis = list(title = if_else(input$num_or_perc %% 2 == 0,'Percentage of Video Games', 'Number of Video Games'))) %>% 
       config(displayModeBar = FALSE)
     
   })
@@ -438,15 +438,15 @@ shinyServer(function(input, output, session) {
       plot_ly(
         x = ~release_year,
         y = ~perc_has_achievements,
-        name ='has Achievements',
+        name ='Has Achievements',
         type = "scatter",
         mode= 'lines'
       ) %>% 
-      add_trace(y = ~perc_has_dlc, name = 'has DLC') %>%
-      add_trace(y = ~perc_is_free, name = 'is Free') %>% 
-      layout(title = 'Games With Given Attributes',
-             xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Percentage of Video Games')) %>% 
+      add_trace(y = ~perc_has_dlc, name = 'Has DLC') %>%
+      add_trace(y = ~perc_is_free, name = 'Is Free') %>% 
+      layout(title = 'Games with Given Attributes by Year',
+             xaxis = list(title = 'Release Year'),
+             yaxis = list(title = if_else(input$num_or_perc %% 2 == 0,'Percentage of Video Games', 'Number of Video Games'))) %>% 
       config(displayModeBar = FALSE)
     
   })
@@ -501,9 +501,9 @@ shinyServer(function(input, output, session) {
       add_trace(y = ~trailers_per_game, name = 'Trailers') %>%
       #add_trace(y = ~publishers_per_game, name = 'Publishers') %>%
       #add_trace(y = ~developers_per_game, name = 'Developers') %>%
-      layout(title = 'Number of Trailers or Screenshots per game',
-             xaxis = list(title = 'Year'),
-             yaxis = list(title = 'Average per Game')) %>% 
+      layout(title = 'Trailers and Screenshots by Year',
+             xaxis = list(title = 'Release Year'),
+             yaxis = list(title = if_else(input$num_or_perc %% 2 == 0,'Average Trailers/Screenshots per Game', 'Total Number of Trailers/Screenshots'))) %>% 
       config(displayModeBar = FALSE)
   })
   
