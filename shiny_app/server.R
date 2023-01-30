@@ -481,7 +481,7 @@ shinyServer(function(input, output, session) {
     )
   })
   
-  output$screenhots_trailers <- renderPlotly({
+  output$screenhots_trailers <- renderPlot({
     steam_games_filtered() %>% 
       group_by(release_year) %>% 
       summarize(secreenshots_per_game= if_else(input$num_or_perc %% 2 == 0, sum(n_screenshots)/n(), as.double(sum(n_screenshots))),
