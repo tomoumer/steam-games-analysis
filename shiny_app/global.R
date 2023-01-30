@@ -5,24 +5,29 @@ library(plotly)
 library(igraph)
 library(DT)
 
-steam_games_df <- readRDS('data/filtered_games_list.rds') %>% 
-  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
-  mutate(release_year=replace(release_year, is.na(release_year) |
-                                release_year < 1997 |
-                                release_year > 2023, 'unknown'))
+#9s to load online, 2.2 sec on my comp
+# changes of filters take around 1.7 sec
 
-genres_relations_df <- readRDS('data/genres_relations.rds')
 
-top_genres_list <- steam_games_df %>% 
-  separate_rows(genres, sep = ';') %>% 
-  count(genres, sort=TRUE, name='num_apps') %>% 
-  head(10) %>% 
+steam_games_df <- readRDS('data/filtered_games.rds')
+genres_relations_df <- readRDS('data/genres_relations_by_year.rds')
+games_genres_df <- readRDS('data/genres_by_year.rds')
+games_categories_df <- readRDS('data/categories_by_year.rds')
+games_developers_df <- readRDS('data/developers_by_year.rds')
+games_publishers_df <- readRDS('data/publishers_by_year.rds')
+
+top_genres_list <- games_genres_df %>% 
+  group_by(genres) %>% 
+  summarize(num_apps = sum(num_apps)) %>% 
+  arrange(desc(num_apps)) %>% 
+  head(5) %>% 
   pull(genres)
 
-top_categories_list <- steam_games_df %>% 
-  separate_rows(categories, sep = ';') %>% 
-  count(categories, sort=TRUE, name='num_apps') %>% 
-  head(10) %>% 
+top_categories_list <- games_categories_df %>% 
+  group_by(categories) %>% 
+  summarize(num_apps = sum(num_apps)) %>% 
+  arrange(desc(num_apps)) %>% 
+  head(5) %>% 
   pull(categories)
 
 

@@ -17,7 +17,6 @@ shinyUI(dashboardPage(
                             icon('github'),
                             title= 'To My Github'),
                           class = 'dropdown')
-                  
   ),
   
   
@@ -116,7 +115,7 @@ shinyUI(dashboardPage(
                      p(strong('Main Body'), '(you are reading it)'),
                      tags$ul(
                        tags$li('The Navigation tab and Trends tab have additional tabs within'),
-                       tags$li('Graphs are interactive - zoom in/out, or show/hide various traces by clicking on the legend')
+                       tags$li('The Genres Network Graph is interactivce - zoom in/out, or hover over vertices')
                      )
                      
             ),
@@ -183,6 +182,7 @@ shinyUI(dashboardPage(
                        tags$li('Steam Controller (2015), Valve Index (2019), Steam Deck (2022) - hardware'),
                        tags$li('Half-Life: Alyx (2020) - first ambitious VR game')
                      )
+                    
             ),
             tabPanel('Gamification',
                      p('Term that refers to turnig real world problems into games to find creative solutions.'),
@@ -223,7 +223,7 @@ shinyUI(dashboardPage(
                   )
                 )
               ),
-              plotlyOutput('games_by_year')
+              plotOutput('games_by_year')
       ),
       
       # ===== Trends tab ======
@@ -287,12 +287,12 @@ shinyUI(dashboardPage(
               tabBox(
                 id = "tabset2",
                 width=12,
-                tabPanel('Genres', plotlyOutput('top_genres')),
-                tabPanel('Categories', plotlyOutput('top_categories')),
-                tabPanel('OS', plotlyOutput('platforms_percentage')),
-                tabPanel('Ratings', plotlyOutput('ratings')),
-                tabPanel('Other', plotlyOutput('other_stats')),
-                tabPanel('Trailers and Screenshots', plotlyOutput('screenhots_trailers'))
+                tabPanel('Genres', plotOutput('top_genres')),
+                tabPanel('Categories', plotOutput('top_categories')),
+                tabPanel('OS', plotOutput('platforms_percentage')),
+                tabPanel('Ratings', plotOutput('ratings')),
+                tabPanel('Other', plotOutput('other_stats')),
+                tabPanel('Trailers and Screenshots', plotOutput('screenhots_trailers'))
               )
               )
               
