@@ -14,7 +14,7 @@ library(igraph)
 
 ## Exploring the data
 
-I started with a tibble having 152,194 apps, and after running through them individually, 138,746 remain (non null, etc...). In other words, I lost about 8.8% of data - collected from 12/23/2022 to 12/26/2022. Some of it could be recovered I'm sure, as the steam APIs don't always perfectly reflect the current situation, for example by scraping through the steam store. I'll leave that for now.
+I started with a tibble having 152,194 apps, and after running through them individually, 138,746 remain (non null, etc...). In other words, I lost about 8.8% of data - collected from 12/23/2022 to 12/26/2022. Some of it could be recovered I'm sure, as the steam APIs don't always perfectly reflect the current situation - for example by scraping through the steam store. I will not explore that option due to limited time available for this project.
 
 ```{r}
 steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds')
@@ -30,7 +30,7 @@ Much later into the data exploration I realized that some games appear as multip
 -   24058 Railworks Evening Star DLC
 -   24010 Train Simulator
 
-are now all simply Train Simulator Classic (checkin it on the steam webpage, all IDs redirect to this same entry), so I added a `distinct(name_app, .keep_all= TRUE)` to account for that and had to redo all the steps and numbers down below.
+are now all simply Train Simulator Classic (on the steam webpage, all IDs redirect to this same entry), so I added a `distinct(name_app, .keep_all= TRUE)` to account for that and had to redo all the steps and numbers down below.
 
 ```{r}
 steam_apps_df <- steam_apps_df %>% 
@@ -81,7 +81,7 @@ steam_games_df %>%
 
 Genres, developers, publishers and categories are all very well represented through the whole games data set. Only 43.70 % of games have achievements (makes sense, games didn't use to have this).
 
-Where it gets really scarce is the recommended, dlc and metacritic. For the DLC it likely makes sense - only successfull games would likely have them. I'm very suspicious about the metacritic scores (and possibly recommends). I think this is where the steam API falls short.
+Where it gets really scarce is the recommended, dlc and metacritic. For the DLC it likely makes sense - only successfull games would have them. I'm surprised about the metacritic scores (and possibly recommends).
 
 ### Functions for unpacking
 
@@ -190,18 +190,6 @@ Finally, there are 51,901 game developers listed.
 
 Based on the numbers of devs and publishers present in steam, I didn't have much hope since Wikipedia only lists 724 devs and 877 publishers, some of them not even active anymore. Still:
 
-    steam_games_df %>% 
-      filter(!is.na(publishers)) %>%
-      separate(publishers, c('pub1', 'pub2', 'pub3', 'pub4', 'pub5'), sep=';') %>%
-      filter(tolower(pub1) %in% tolower(publishers_df %>% pull(Publisher)) |
-               tolower(pub2) %in% tolower(publishers_df %>% pull(Publisher)) |
-               tolower(pub3) %in% tolower(publishers_df %>% pull(Publisher)) |
-               tolower(pub4) %in% tolower(publishers_df %>% pull(Publisher)) |
-               tolower(pub5) %in% tolower(publishers_df %>% pull(Publisher))) %>% 
-      count(pub1, sort=TRUE)
-
-Above the old way how I did with separate; below the new one:
-
 ```{r}
 # note: converting names tolower since there is some missmatch (like SEGA and Sega) # just doing a count() gives the total values
 steam_games_df %>% 
@@ -220,6 +208,8 @@ steam_games_df %>%
 ```
 
 Just doing a simple tolower convert, I am left with 137 developers and 375 publishers, accounting for 3491 and 2212 games respectivelly. Not great. I'll have to figure out either how to do better matching, or otherwise will have to manually add some of the most productive devs and publishers to the lists.
+
+> NOTE: I did not pursue the above furder as I focussed on other topics
 
 ### Unpacking categories
 
@@ -254,13 +244,13 @@ apps_count_by_var_count(apps_df=steam_games_df, var_name='genres')
 apps_count_by_var(apps_df=steam_games_df, var_name='genres')
 ```
 
-Most games (69.2%) are marked as Indie, no surprise there. Besides that, the most popular categories are Action (42.1%), Adventure (39.3%) and Casual (38.3%).
+Most games (69.2%) are marked as Indie, perhaps a little surprising just how dominating this category is. Besides that, the most popular categories are Action (42.1%), Adventure (39.3%) and Casual (38.3%).
 
 When it gets crazy, and obviously foul play - is games fishing for filters. There's a game, "CAT SUDOKU🐱" that allegedly has 19 genres. Second most is at 16, with '英语杀', which google translates to 'English kill' lol. At 12 genres there's '墲人之境：1V4摸金对决' translated to 'The realm of the barren: 1V4 duel for gold' and 'Simple Tools'. Having 8-11 genres still has a suspiciously low number of games (in the hundreds).
 
 For anyone curious about two hilariously ridiculous games, look for developer 'tomimar', with 'HOT GIRLS VR' and 'SEXY GIRLS'. Obviously racing, strategy, RPG, massively-multiplayer games. No doubt!
 
-In fact, most games seem to have 1-6 genres (96.15% of games), with the bulk really being concentrated from 1-4.
+Most games seem to have 1-6 genres (96.15% of games), with the bulk really being concentrated from 1-4.
 
 ```{r}
 steam_games_df %>% 
@@ -561,11 +551,10 @@ steam_games_df %>%
 ```
 
 
-
 ## Finalized Data
 
-Moving on to trying the charts and data in the shiny app..
+After getting a good grasp on the data, I moved on to trying the charts and data display in the shiny app...
 
 ```{r}
-#steam_games_df %>% saveRDS(file='../shiny_app/data/filtered_games_list.rds')
+steam_games_df %>% saveRDS(file='../shiny_app/data/filtered_games_list.rds')
 ```

@@ -14,7 +14,7 @@ library(igraph)
 
 ## reading in the data and filtering to get just the games
 
-> note: I might expand on this at a later date
+> NOTE: I might expand on this at a later date to include dlcs or other categories
 
 ```{r}
 steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds') %>% 
@@ -24,36 +24,52 @@ steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds') %>%
 ```{r}
 steam_games_df <- steam_apps_df%>% 
   filter(type=='game') %>% 
-  select(-type)
+  select(-c('name_tot','type', 'required_age'))
 ```
+
+Added later when I finalized the columns that I'm going to use
+
+```{r}
+steam_games_df <- steam_games_df %>% 
+  mutate(release_year=str_extract(release_date, '\\d{4}')) %>% 
+  mutate(release_year=replace(release_year, is.na(release_year) |
+                                release_year < 1997 |
+                                release_year > 2023, '20XY'))
+```
+
 
 ## Network Graph - Categories
 
 Checking out possible connections between categories for a network graph.
 
-```{r}
-categories_list <- steam_games_df %>% 
-    filter(!is.na(categories)) %>%
-    separate_rows(categories, sep = ';') %>% 
-    distinct(categories) %>% 
-    pull()
-```
+> I commented the code below because it takes a few min to run and ultimately I decided that there
+was not much value in looking at the categories and their inter connectivity
 
 ```{r}
-count_connections <- 0
+# Get the list of distinct categories
+#categories_list <- steam_games_df %>% 
+#  filter(!is.na(categories)) %>%
+#  separate_rows(categories, sep = ';') %>% 
+#  distinct(categories) %>% 
+#  pull()
 
-for (j in 1:(length(categories_list)-1)) {
-  for (i in (j+1):length(categories_list)) {
-    if(steam_games_df %>% 
-       filter(str_detect(categories, categories_list[j]) &
-              str_detect(categories, categories_list[i])) %>% 
-       count() %>% 
-       pull()
-       != 0 ) {count_connections = count_connections + 1} 
-  }
-}
+# dummy variable to count all different connections between pairs of categories
+#count_connections <- 0
 
-print(count_connections)
+# loop over categories
+# NOTE: this takes a few minutes to run
+#for (j in 1:(length(categories_list)-1)) {
+#  for (i in (j+1):length(categories_list)) {
+#    if(steam_games_df %>% 
+#       filter(str_detect(categories, categories_list[j]) &
+#              str_detect(categories, categories_list[i])) %>% 
+#       count() %>% 
+#       pull()
+#       != 0 ) {count_connections = count_connections + 1} 
+#  }
+#}
+#
+#print(count_connections)
 ```
 
 I'd need 659 connections to map out categories in a network graph
@@ -63,41 +79,56 @@ I'd need 659 connections to map out categories in a network graph
 Checking out possible combinations for potentially building a network graph. This turned out to be a much better idea than categories.
 
 ```{r}
+# counting apps by genre (overall)
 apps_count_by_genre <- steam_games_df %>% 
-    filter(!is.na(genres)) %>%
-    separate_rows(genres, sep = ';') %>% 
-    select(name_app, genres) %>%
-    count(genres, sort=TRUE, name='num_apps') 
+  filter(!is.na(genres)) %>%
+  separate_rows(genres, sep = ';') %>% 
+  select(name_app, genres) %>%
+  count(genres, sort=TRUE, name='num_apps') 
+
+# same as above but having a breakdown by years
+apps_count_by_genre_year <- steam_games_df %>% 
+  filter(!is.na(genres)) %>%
+  separate_rows(genres, sep = ';') %>% 
+  select(name_app, release_year, genres) %>%
+  count(genres, release_year, sort=TRUE, name='num_apps')
+
+# how many years there are ..
+years_list <- steam_games_df %>% 
+  distinct(release_year) %>% 
+  pull()
 ```
 
+> NOTE: code commented below is the original version without breakdown by years.
+
 ```{r}
-different_connections <- 0
-count_connections <- 0
+#different_connections <- 0
+#count_connections <- 0
 
-relations <- tibble(from=character(),
-                    to=character(),
-                    num_connections=numeric()
-)
+#relations <- tibble(from=character(),
+#                    to=character(),
+#                    num_connections=numeric()
+#)
 
-for (j in 1:(nrow(apps_count_by_genre)-1)) {
-  for (i in (j+1):nrow(apps_count_by_genre)) {
-    count_connections <- steam_games_df %>% 
-       filter(str_detect(genres, (apps_count_by_genre %>% pull(genres))[j]) &
-              str_detect(genres, (apps_count_by_genre %>% pull(genres))[i])) %>% 
-       count() %>% 
-       pull()
-    
-    if(count_connections != 0 ) {
-      different_connections = different_connections + 1
-      relations <- relations %>% 
-        add_row(from=(apps_count_by_genre %>% pull(genres))[j],
-                to= (apps_count_by_genre %>% pull(genres))[i],
-                num_connections=count_connections)
-    } 
-  }
-}
+#for (j in 1:(nrow(apps_count_by_genre)-1)) {
+#  for (i in (j+1):nrow(apps_count_by_genre)) {
+#    count_connections <- steam_games_df %>% 
+#      filter(str_detect(genres, (apps_count_by_genre %>% pull(genres))[j]) &
+#               str_detect(genres, (apps_count_by_genre %>% pull(genres))[i])) %>% 
+#      count() %>% 
+#      pull()
 
-print(different_connections)
+#    if(count_connections != 0 ) {
+#      different_connections = different_connections + 1
+#      relations <- relations %>% 
+#        add_row(from=(apps_count_by_genre %>% pull(genres))[j],
+#                to= (apps_count_by_genre %>% pull(genres))[i],
+#                num_connections=count_connections)
+#    } 
+#  }
+#}
+
+#print(different_connections)
 
 
 ```
@@ -106,70 +137,129 @@ If I include all genres, I'll need 389 connections. However. Cat sudoku is the o
 
 Also with less than 10 counts of connections, I loose 6 genre categories right away., 20 loose 6; then have to go up to 80 to loose 7, 90 to loose 11. So filtering on 100 (just to have a round number instead of 90), will alow me to get rid of 11 genres that are very rarely represented.
 
-Looking below, by cutting at less than 31 connections, I only loose 0.495% of overall number of connections (suggested possible cutoff at 0.5% by Michael). With it, I lose the following 7 genres: Accounting (24 games), Movie (2 games), 360 Video (1 game), Documentary (1 game), Episodic (1 game), Short (1 game), Tutorial (1 game)
+Looking below, by cutting at less than 31 connections, I only loose 0.495% of overall number of connections (suggested possible cutoff at 0.5% by Michael). With it, I lose the following 7 genres: Accounting (24 games), Movie (2 games), 360 Video (1 game), Documentary (1 game), Episodic (1 game), Short (1 game), Tutorial (1 game).
+
+I also did some additional testing (successively deleted the code since i decided against it) where I either cut our certain "weak" connections as a small percentage of the total, or, weighted them (depending on the possible size - in the shiny app I included a table with this later info).
+
+Ultimately, I decided that I would not make any cuts and instead, do a breakdown over release years.
+
+> NOTE: the code below takes about 20 minutes to run!!
 
 ```{r}
-relations %>% 
-  filter(num_connections < 32) %>% 
-  summarize(sum(num_connections)) %>% 
-  pull() / relations %>% summarize(sum(num_connections)) %>% pull()
+different_connections <- 0
+count_connections <- 0
+
+relations <- tibble(from=character(),
+                    to=character(),
+                    num_connections=numeric(),
+                    release_year=character()
+)
+
+
+for (yr in years_list) {
+  games_by_year <- steam_games_df %>% 
+    filter(release_year == yr)
+  
+  for (j in 1:(nrow(apps_count_by_genre)-1)) {
+    for (i in (j+1):nrow(apps_count_by_genre)) {
+      count_connections <- games_by_year %>% 
+        filter(str_detect(genres, (apps_count_by_genre %>% pull(genres))[j]) &
+                 str_detect(genres, (apps_count_by_genre %>% pull(genres))[i])) %>% 
+        count() %>% 
+        pull()
+      
+      if(count_connections != 0 ) {
+        different_connections = different_connections + 1
+        relations <- relations %>% 
+          add_row(from=(apps_count_by_genre %>% pull(genres))[j],
+                  to= (apps_count_by_genre %>% pull(genres))[i],
+                  num_connections=count_connections,
+                  release_year=yr)
+      } 
+    }
+  }
+}
+
+print(different_connections)
+
+# below to save
+#relations %>%  saveRDS('../shiny_app/data/genres_relations_by_year.rds')
 
 ```
 
+## Work in progress - a more efficient way to count connections
+
+After speaking with Michael, trying to do a more efficient count rather than a triple for loop..
+
+The idea being:
+1) separating genres into rows as before
+2) filling a 'dummy' column with 1
+3) pivoting table to individual genres columns (up to 33 of them) and filling missing values with 0
+4) counting that matrix
+
+> Tested something fairly obvious: if I separate rows in genres first, and filter later, the proces
+is slower than if I filter first and then separate later. However, if I keep reiterating (aka changing
+the filter conditions), then the approach of separating all rows for all years is better.
 
 ```{r}
-rel_from <- relations %>% 
-  filter(num_connections >= 32) %>% 
-  distinct(from)
+# Start the clock!
+ptm <- proc.time()
 
-rel_to <- relations %>% 
-  filter(num_connections >= 32) %>% 
-  distinct(to)
+steam_games_df %>% 
+  filter(!is.na(genres)) %>%
+  separate_rows(genres, sep = ';') %>% 
+  select(name_app, release_year, genres) %>% 
+  add_column(dummy=1) %>% 
+  pivot_wider(id_cols=c('name_app', 'release_year'),
+              names_from='genres', values_from='dummy',
+              values_fill=0)
 
-genres_filtered <- rel_from %>% 
-  full_join(rel_to, by=c('from'='to')) %>% 
+
+# Stop the clock
+proc.time() - ptm
+
+```
+
+```{r}
+distinct_genres <- steam_games_df %>% 
+  filter(!is.na(genres)) %>%
+  separate_rows(genres, sep = ';') %>% 
+  distinct(genres) %>%
   pull()
 
-```
-
-```{r}
-apps_count_by_genre_filtered <- apps_count_by_genre %>% 
-  filter(genres %in% genres_filtered)
-
-relations_filtered <- relations %>% 
-  filter(num_connections >= 32)
-```
-
-```{r}
-# attempted to weight the connections, didn't yield results I wanted
-#relations_weighted <- relations_filtered %>%
-#  left_join(apps_count_by_genre_filtered, by=c('from'='genres')) %>% 
-#  rename(from_num_apps=num_apps) %>% 
-#  left_join(apps_count_by_genre_filtered, by=c('to'='genres')) %>% 
-#  rename(to_num_apps=num_apps) %>% 
-#  mutate(adjusted_connections= num_connections / pmin(from_num_apps, to_num_apps)) %>% 
-#  select(from, to, adjusted_connections)
-
-# also have to add this code below
-# width = if_else((relations_weighted %>% pull(adjusted_connections))[i] > 0.5, (relations_weighted %>% pull(adjusted_connections))[i], 0)
+expand_grid(x=distinct_genres, y=distinct_genres)
+permutations(n=33,r=2,v=distinct_genres, repeats.allowed=FALSE)
 ```
 
 
-Time to do the network graph!!
+## Drawing the Genres Network Graph
 
 ```{r}
 # to make the igraph
-g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=apps_count_by_genre_filtered)
+#g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=apps_count_by_genre_filtered)
+vertices_filtered <- apps_count_by_genre_year_filtered %>% 
+  filter(release_year==2006) %>% 
+  group_by(genres) %>% 
+  summarize(num_apps=sum(num_apps)) %>% 
+  arrange(desc(num_apps))
+
+relations_filtered <- relations_cut %>% 
+  filter(release_year==2006) %>% 
+  group_by(from, to) %>% 
+  summarize(num_connections=sum(num_connections)) %>% 
+  ungroup()
+
+g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=vertices_filtered )
 ```
 
 ```{r}
 G <- upgrade_graph(g)
 #L <- layout_in_circle(G)
 #set.seed(300)
-#L <- layout_nicely(G)
+L <- layout_nicely(G)
 #L <- layout_with_dh(G)
 
-L <- candidate_layout_01
+#L <- candidate_layout_01
 
 vs <- V(G)
 es <- as.data.frame(get.edgelist(G))
@@ -179,20 +269,23 @@ Ne <- length(es[1]$V1)
 Xn <- L[,1]
 Yn <- L[,2]
 
-unique_names <- unique(c(es$V1, es$V2))
+#unique_names <- unique(c(es$V1, es$V2))
+
+unique_names <- unique(vertices_filtered$genres)
 names(Xn) <- unique_names
 names(Yn) <- unique_names
+
 
 network <- plot_ly(x = ~Xn, 
                    y = ~Yn, 
                    mode = 'markers', 
-                   marker = list(size = 100* (apps_count_by_genre_filtered %>% pull(num_apps)) / (apps_count_by_genre_filtered %>% select(num_apps) %>% sum()),
+                   marker = list(size = 100* (vertices_filtered %>% pull(num_apps)) / (vertices_filtered %>% select(num_apps) %>% sum()),
                                  opacity = 0.7),
                    #text = vs$label, 
-                   text = paste(unique_names, '<br>', apps_count_by_genre_filtered$num_apps),
-                   texttemplate = if_else(100* (apps_count_by_genre_filtered %>% pull(num_apps)) / (apps_count_by_genre_filtered %>% select(num_apps) %>% sum()) >10, paste(unique_names, '<br>', apps_count_by_genre_filtered$num_apps), ''),
+                   text = paste(unique_names, '<br>', vertices_filtered$num_apps),
+                   texttemplate = if_else(100* (vertices_filtered %>% pull(num_apps)) / (vertices_filtered %>% select(num_apps) %>% sum()) >10, paste(unique_names, '<br>', vertices_filtered$num_apps), ''),
                    hoverinfo = 'text'
-                   ) %>% 
+) %>% 
   add_text(textposition= 'right')
 
 
@@ -205,7 +298,7 @@ for(i in 1:Ne) {
     type = 'line',
     line = list(color = "#030303",
                 width = 30 * (relations_filtered %>% pull(num_connections))[i] / (relations_filtered %>% select('num_connections') %>% sum())
-                ),
+    ),
     x0 = Xn[v0],
     y0 = Yn[v0],
     x1 = Xn[v1],
@@ -227,6 +320,150 @@ fig <- layout(
 
 fig
 
+```
 
+
+## Some Tests for Shiny App ...
+
+Below the two different variants. I first started with plotly as I thought the interactivity would be useful. But then, with the filters that I was able to add to the shiny app, I changed from plotly to ggplot2 for efficiency.
+
+```{r}
+steam_games_df %>%
+  mutate(release_type=if_else(release_year == 'unknown' | release_year == 2023, 'Unreleased', 'Released')) %>%
+  count(release_year, release_type, name='num_games') %>% 
+  plot_ly(
+    x = ~release_year,
+    y = ~num_games,
+    text = ~num_games,
+    textposition = 'outside',
+    texttemplate = ~if_else(num_games >= 1000, '%{y:.2s}', '%{y:.1s}'),
+    hovertemplate = ~paste('Year:', release_year, '<br>N. Games:', num_games),
+    name = ~release_type,
+    type = 'bar',
+    color = ~release_type,
+    colors = c('#367fa9', '#1b2838')
+  ) %>% 
+  layout(title = 'Video Game Releases by Year',
+         xaxis = list(title = 'Release Year'),
+         yaxis = list(title = 'Number of Video Games'),
+         legend = list(x = 0.1, y = 0.9)
+  )
+```
+```{r}
+steam_games_df %>%
+  mutate(release_type=if_else(release_year == '20XY' | release_year == 2023, 'Unreleased', 'Released')) %>%
+  #filter(release_type != 'Unreleased') %>% 
+  #filter(release_year < 2013) %>% 
+  count(release_year, release_type, name='num_games') %>% 
+  ggplot(aes(x=release_year, y=num_games, fill=release_type, label=format(num_games, big.mark=',') )) +
+  ggtitle('Video Game Releases by Year') +
+  scale_fill_manual(values=c('#367fa9', '#1b2838')) +
+  scale_color_manual(values=c('#367fa9', '#1b2838')) +
+  geom_col() +
+  geom_text(size=2.5, vjust=-0.5, aes(color=release_type)) +
+  labs(x ='Release Year', y = 'Number of Video Games', fill='Game Status', color='Game Status') +
+  #geom_vline(xintercept = '2014', linetype="dashed") +
+  #  annotate("text", x='2014', y= 5000, label='World Average', angle = 90) +
+  theme(axis.text.x=element_text(angle = 90, hjust = 0, vjust=0), legend.position=c(0.15, 0.8))
 
 ```
+
+```{r}
+# Start the clock!
+ptm <- proc.time()
+
+steam_games_df %>% 
+  filter(!is.na(genres)) %>%
+  separate_rows(genres, sep = ';') %>% 
+  select(name_app, release_year, genres) %>% 
+  saveRDS('test.rds')
+
+# Stop the clock
+proc.time() - ptm
+```
+
+
+```{r}
+genres_relations_df %>% 
+  group_by(from, to) %>% 
+  summarize(total_connections=sum(num_connections)) %>% 
+  ungroup() %>% 
+  arrange(desc(total_connections)) %>% 
+  left_join(steam_games_df %>% 
+              separate_rows(genres, sep = ';') %>% 
+              drop_na(genres) %>% 
+              count(genres, sort=TRUE, name='num_apps'),
+            by=c('from'='genres'), suffix=c('_from', '_to')) %>% 
+  left_join(steam_games_df %>% 
+              separate_rows(genres, sep = ';') %>% 
+              drop_na(genres) %>% 
+              count(genres, sort=TRUE, name='num_apps'),
+            by=c('to'='genres'), suffix=c('_from', '_to')) %>% 
+  mutate(possible_connections= paste0(format(100*total_connections / pmin(num_apps_from, num_apps_to), digits=1), '%')) %>% 
+  select(from, to, num_apps_from, num_apps_to, total_connections, possible_connections)
+
+
+steam_games_df %>% 
+  mutate(webpage= paste0('https://store.steampowered.com/app/', ID))
+```
+
+## Shiny App Optimization
+
+After presenting my app on 1/21/2023, I wanted to optimize the code. Namely, I wanted the app to load faster (both on my laptop, as well as on shinyapps.io). So I did a bunch of testing with elapsed time and ultimately broke down the dataframe into multiple so that the code would execute quickly.
+
+I was able to significantly improve load times, making it especially noticeable when changing the filtering options within the app - the refresh time went from a couple of seconds to a fraction of one!
+
+```{r}
+# games dataset with columns that don't need any additional string manipulations
+# changed columns from char to logical where possible (since I ended using only that info)
+steam_games_df %>%
+  separate(windows_mac_linux, c('is_win', 'is_mac', 'is_linux'), sep = ';') %>%
+  mutate(is_win = as.logical(is_win),
+         is_mac = as.logical(is_mac),
+         is_linux = as.logical(is_linux),
+         has_dlc=ifelse(is.na(dlc), FALSE, TRUE),
+         has_recommended=ifelse(is.na(recommended), FALSE, TRUE),
+         has_metacritic=ifelse(is.na(metacritic), FALSE, TRUE),
+         has_achievements=ifelse(is.na(achievements), FALSE, TRUE)) %>%
+  select('ID', 'name_app', 'is_free', 'is_win', 'is_mac', 'is_linux', 'has_dlc', 'has_recommended', 'has_metacritic', 'has_achievements', 'release_date', 'release_year', 'n_screenshots', 'n_trailers') %>% 
+  saveRDS('../shiny_app/data/filtered_games.rds')
+
+steam_games_df %>% 
+  drop_na(publishers) %>% 
+  separate_rows(publishers, sep = ';') %>% 
+  select(ID, publishers, release_year) %>% 
+  saveRDS('../shiny_app/data/publishers_by_year.rds')
+
+steam_games_df %>% 
+  drop_na(developers) %>% 
+  separate_rows(developers, sep = ';') %>% 
+  select(ID, developers, release_year) %>% 
+  saveRDS('../shiny_app/data/developers_by_year.rds')
+
+steam_games_df %>% 
+  drop_na(genres) %>% 
+  separate_rows(genres, sep = ';') %>% 
+  group_by(release_year) %>% 
+  count(genres, sort=TRUE, name='num_apps') %>% 
+  ungroup() %>%
+  saveRDS('../shiny_app/data/genres_by_year.rds')
+
+steam_games_df %>% 
+  drop_na(categories) %>% 
+  separate_rows(categories, sep = ';') %>% 
+  group_by(release_year) %>% 
+  count(categories, sort=TRUE, name='num_apps') %>% 
+  ungroup() %>% 
+  saveRDS('../shiny_app/data/categories_by_year.rds')
+
+```
+
+
+
+
+1. fork code
+2. delete old one
+3. pull down new one
+
+1. new repo personal github
+2. git remote add

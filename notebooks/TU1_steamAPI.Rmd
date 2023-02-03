@@ -10,14 +10,13 @@ date: "2022-12-23"
 library(tidyverse)
 library(httr)
 library(rvest)
-library(lubridate)
 ```
 
-In order to do the analysis, I'll first pull all the app IDs currently available on steam. As of. 12/23/2022 it is 152217. There are 54 apps that have a placeholder id (but they're not available to see for the public yet, so no name). I decided to eliminate those, leaving me with 152163 apps. There were also some other mistakes present, so the final number of apps is 152194.
+In order to do the analysis, I'll first pull all the app IDs currently available on steam. As of 12/23/2022 that number is 152217. There are 54 apps that have a placeholder id (but they're not available to see for the public yet, so no name). I decided to eliminate those, leaving me with 152163 apps. There were also some other mistakes present, so the final number of apps is 152194.
 
 ## Initialize Tibble and populate with appIDs and names
 
-> NOTE: The code below only needs to be run once; I commented it out once done.
+> NOTE: The code below only needs to be run once; I commented it out once done and saved the list.
 
 ```{r}
   # connect to the steam API with list of appIDs
@@ -65,7 +64,7 @@ In order to do the analysis, I'll first pull all the app IDs currently available
 
 ## Get individual apps data
 
-> NOTE: This next line is NOT needed if proceeding straight from above. But if any mistakes are made, you can always read in the last version instead of re-running the stuff.
+> NOTE: This next line is NOT needed if proceeding straight from above. But if any mistakes are made, then this file would be the new starting point (backup). As I update this tibble later my recommendation is to always save a new version of complete_apps_list (see "additional checks and saving" below).
 
 ```{r}
 steam_apps_df <- readRDS('../data/complete_apps_list.rds')
@@ -168,7 +167,7 @@ get_app_details <- function(apps_df, num_apps){
 
 With the function defined, all it remains is to run through all of the apps individually. I was doing it in chunks to perform some additional checks as I went through it (and there were some minor fixes I had to adjust). I chose the function to run through 100 games and then repeat with the desired number of loops, printing out occasionally.
 
-> NOTE: That said, the below could just be ran through the entire list, however, it will take approx. 600 hours to do so and there ARE going to be some 429 responses every once in a while.
+> NOTE: That said, the below could just be ran through the entire list, however, it will take approx. 60 hours to do so and there ARE going to be some 429 responses every once in a while.
 
 ```{r}
 for (i in 1:100) {
@@ -194,15 +193,17 @@ steam_apps_df %>%
   slice(16800:17000) 
 ```
 
-Finally, and perhaps most importantly, save the data so that it can be
+Finally, and perhaps most importantly, save the data. Like previously noted, I did this each time I ran a through a significant chunk of apps. Creating various points that I could return to should anything break irreversably.
 
 ```{r}
 saveRDS(steam_apps_df, file = "../data/complete_apps_list_138746.rds")
 ```
 
-## Ge publishers and developers from wikipedia
+## Get publishers and developers from wikipedia
 
 I decided to add this part to the steamAPI document, since it contains more webscraping. Obtaining the list of publishers and developers from Wikipedia.
+
+> NOTE: ultimately this was not part of my analysis as both lists were very limited
 
 ```{r}
 publisher_list <-  read_html('https://en.wikipedia.org/wiki/List_of_video_game_publishers')
