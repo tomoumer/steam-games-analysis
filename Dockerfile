@@ -1,4 +1,4 @@
-FROM rocker/shiny-verse
+FROM rocker/r-ver
 
 # Install system dependencies required by R packages
 RUN apt-get update && apt-get install -y \
