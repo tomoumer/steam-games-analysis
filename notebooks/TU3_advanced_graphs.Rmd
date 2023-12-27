@@ -236,7 +236,7 @@ permutations(n=33,r=2,v=distinct_genres, repeats.allowed=FALSE)
 
 ```{r}
 # to make the igraph
-# g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=apps_count_by_genre_filtered)
+g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=apps_count_by_genre_filtered)
 vertices_filtered <- apps_count_by_genre_year_filtered %>% 
   filter(release_year==2006) %>% 
   group_by(genres) %>% 

@@ -556,5 +556,5 @@ steam_games_df %>%
 After getting a good grasp on the data, I moved on to trying the charts and data display in the shiny app...
 
 ```{r}
-steam_games_df %>% saveRDS(file='../shiny_app/data/filtered_games_list.rds')
+steam_games_df %>% saveRDS(file='./data/filtered_games_list.rds')
 ```
