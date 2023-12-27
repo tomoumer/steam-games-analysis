@@ -9,12 +9,12 @@ library(DT)
 # changes of filters take around 1.7 sec
 
 
-steam_games_df <- readRDS('data/filtered_games.rds')
-genres_relations_df <- readRDS('data/genres_relations_by_year.rds')
-games_genres_df <- readRDS('data/genres_by_year.rds')
-games_categories_df <- readRDS('data/categories_by_year.rds')
-games_developers_df <- readRDS('data/developers_by_year.rds')
-games_publishers_df <- readRDS('data/publishers_by_year.rds')
+steam_games_df <- readRDS('./data/filtered_games.rds')
+genres_relations_df <- readRDS('./data/genres_relations_by_year.rds')
+games_genres_df <- readRDS('./data/genres_by_year.rds')
+games_categories_df <- readRDS('./data/categories_by_year.rds')
+games_developers_df <- readRDS('./data/developers_by_year.rds')
+games_publishers_df <- readRDS('./data/publishers_by_year.rds')
 
 top_genres_list <- games_genres_df %>% 
   group_by(genres) %>% 

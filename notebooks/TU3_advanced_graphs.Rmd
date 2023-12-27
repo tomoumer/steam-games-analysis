@@ -17,7 +17,7 @@ library(igraph)
 > NOTE: I might expand on this at a later date to include dlcs or other categories
 
 ```{r}
-steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds') %>% 
+steam_apps_df <- readRDS('./data/complete_apps_list_FINAL.rds') %>% 
   distinct(name_app, .keep_all= TRUE)
 ```
 
@@ -183,7 +183,7 @@ for (yr in years_list) {
 print(different_connections)
 
 # below to save
-#relations %>%  saveRDS('../shiny_app/data/genres_relations_by_year.rds')
+relations %>%  saveRDS('./data/genres_relations_by_year.rds')
 
 ```
 
@@ -236,7 +236,7 @@ permutations(n=33,r=2,v=distinct_genres, repeats.allowed=FALSE)
 
 ```{r}
 # to make the igraph
-#g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=apps_count_by_genre_filtered)
+g <- graph_from_data_frame(relations_filtered, directed=FALSE, vertices=apps_count_by_genre_filtered)
 vertices_filtered <- apps_count_by_genre_year_filtered %>% 
   filter(release_year==2006) %>% 
   group_by(genres) %>% 
@@ -426,19 +426,19 @@ steam_games_df %>%
          has_metacritic=ifelse(is.na(metacritic), FALSE, TRUE),
          has_achievements=ifelse(is.na(achievements), FALSE, TRUE)) %>%
   select('ID', 'name_app', 'is_free', 'is_win', 'is_mac', 'is_linux', 'has_dlc', 'has_recommended', 'has_metacritic', 'has_achievements', 'release_date', 'release_year', 'n_screenshots', 'n_trailers') %>% 
-  saveRDS('../shiny_app/data/filtered_games.rds')
+  saveRDS('./data/filtered_games.rds')
 
 steam_games_df %>% 
   drop_na(publishers) %>% 
   separate_rows(publishers, sep = ';') %>% 
   select(ID, publishers, release_year) %>% 
-  saveRDS('../shiny_app/data/publishers_by_year.rds')
+  saveRDS('./data/publishers_by_year.rds')
 
 steam_games_df %>% 
   drop_na(developers) %>% 
   separate_rows(developers, sep = ';') %>% 
   select(ID, developers, release_year) %>% 
-  saveRDS('../shiny_app/data/developers_by_year.rds')
+  saveRDS('./data/developers_by_year.rds')
 
 steam_games_df %>% 
   drop_na(genres) %>% 
@@ -446,7 +446,7 @@ steam_games_df %>%
   group_by(release_year) %>% 
   count(genres, sort=TRUE, name='num_apps') %>% 
   ungroup() %>%
-  saveRDS('../shiny_app/data/genres_by_year.rds')
+  saveRDS('./data/genres_by_year.rds')
 
 steam_games_df %>% 
   drop_na(categories) %>% 
@@ -454,7 +454,7 @@ steam_games_df %>%
   group_by(release_year) %>% 
   count(categories, sort=TRUE, name='num_apps') %>% 
   ungroup() %>% 
-  saveRDS('../shiny_app/data/categories_by_year.rds')
+  saveRDS('./data/categories_by_year.rds')
 
 ```
 

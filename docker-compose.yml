@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+  shinyapp:
+    build: .
+    platform: linux/x86_64
+    ports:
+      - "3838:3838"
+    # volumes:
+    #   - ./shiny_app:/srv/shiny-server
+    #   - ./data:/srv/shiny-server/data
