@@ -46,8 +46,12 @@ In order to do the analysis, I'll first pull all the app IDs currently available
 
     # this variable only used for printout to see how the construction of the tibble is going
     counting <- 0
+    max_items <- 5000
 
     for (i in content(complete_app_list)$applist$apps) {
+      if (counting >= max_items) {
+        break
+      }
       if (i$name != '') {
         steam_apps_df <- steam_apps_df %>% 
           add_row(ID = i$appid, name_tot = i$name)
@@ -59,7 +63,7 @@ In order to do the analysis, I'll first pull all the app IDs currently available
     }
 
 
-    saveRDS(steam_apps_df, file = "../data/complete_apps_list.rds")
+    saveRDS(steam_apps_df, file = "./data/complete_apps_list.rds")
 ```
 
 ## Get individual apps data
@@ -67,7 +71,7 @@ In order to do the analysis, I'll first pull all the app IDs currently available
 > NOTE: This next line is NOT needed if proceeding straight from above. But if any mistakes are made, then this file would be the new starting point (backup). As I update this tibble later my recommendation is to always save a new version of complete_apps_list (see "additional checks and saving" below).
 
 ```{r}
-steam_apps_df <- readRDS('../data/complete_apps_list.rds')
+steam_apps_df <- readRDS('./data/complete_apps_list.rds')
 ```
 
 The `get_app_details` function below is where the magic happens. I put comments inline, but essentially, the function takes the list of appIDs that don't have the column "name_app" filled (that column represents names taken directly from individual apps - sometimes formatted differently than "name_tot" obtained from the complete list).
@@ -196,7 +200,7 @@ steam_apps_df %>%
 Finally, and perhaps most importantly, save the data. Like previously noted, I did this each time I ran a through a significant chunk of apps. Creating various points that I could return to should anything break irreversably.
 
 ```{r}
-saveRDS(steam_apps_df, file = "../data/complete_apps_list_138746.rds")
+saveRDS(steam_apps_df, file = "./data/complete_apps_list_138746.rds")
 ```
 
 ## Get publishers and developers from wikipedia
@@ -212,7 +216,7 @@ publisher_list %>%
   html_nodes('table') %>% 
   pluck(2) %>% 
   html_table %>% 
-  saveRDS(file='../data/publisher_list.rds')
+  saveRDS(file='./data/publisher_list.rds')
 
 
 developer_list <-  read_html('https://en.wikipedia.org/wiki/List_of_video_game_developers')
@@ -221,7 +225,7 @@ developer_list %>%
   html_nodes('table') %>% 
   pluck(4) %>% 
   html_table %>% 
-  saveRDS(file='../data/developer_list.rds')
+  saveRDS(file='./data/developer_list.rds')
 
 ```
 

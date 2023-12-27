@@ -17,9 +17,9 @@ library(igraph)
 I started with a tibble having 152,194 apps, and after running through them individually, 138,746 remain (non null, etc...). In other words, I lost about 8.8% of data - collected from 12/23/2022 to 12/26/2022. Some of it could be recovered I'm sure, as the steam APIs don't always perfectly reflect the current situation - for example by scraping through the steam store. I will not explore that option due to limited time available for this project.
 
 ```{r}
-steam_apps_df <- readRDS('../data/complete_apps_list_FINAL.rds')
-publishers_df <- readRDS('../data/publisher_list.rds')
-developers_df <- readRDS('../data/developer_list.rds')
+steam_apps_df <- readRDS('./data/complete_apps_list_FINAL.rds')
+publishers_df <- readRDS('./data/publisher_list.rds')
+developers_df <- readRDS('./data/developer_list.rds')
 ```
 
 Much later into the data exploration I realized that some games appear as multiple separate IDs - because of being re-released as a complete package. The individual name_app reflects that. For example:
